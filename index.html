@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Commonplace — Your Digital Commonplace Book</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary: #1a1612;
+      --bg-secondary: #241f1a;
+      --bg-card: #2a2420;
+      --bg-input: #1e1915;
+      --text-primary: #f0e6d6;
+      --text-secondary: #b8a898;
+      --text-muted: #7a6b5d;
+      --accent: #d4a574;
+      --accent-hover: #e0b88a;
+      --accent-dim: rgba(212,165,116,0.15);
+      --accent-glow: rgba(212,165,116,0.3);
+      --border: #3a3228;
+      --danger: #c75c5c;
+      --success: #6dab6d;
+      --graph-theme: #d4a574;
+      --graph-source: #7ab0d4;
+      --graph-link: rgba(212,165,116,0.25);
+      --type-book: #d4a574;
+      --type-article: #7ab0d4;
+      --type-whitepaper: #a87bd4;
+      --type-podcast: #6dab6d;
+      --type-person: #d47a8a;
+      --type-conversation: #d4c57a;
+      --type-other: #8a8a8a;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh; min-height: 100dvh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes ripple { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    .slide-up { animation: slideUp 0.4s ease-out; }
+
+    #root { min-height: 100vh; min-height: 100dvh; }
+
+    .app-container {
+      max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh;
+      display: flex; flex-direction: column; position: relative;
+    }
+    .app-content { flex: 1; padding: 16px 16px 90px 16px; overflow-y: auto; }
+
+    /* Header */
+    .app-header { padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
+    .app-title { font-family: 'Libre Baskerville', serif; font-size: 22px; color: var(--accent); letter-spacing: 0.5px; }
+    .app-subtitle { font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
+
+    /* Bottom nav - 5 items */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px; background: var(--bg-secondary);
+      border-top: 1px solid var(--border); display: flex; padding: 6px 0;
+      padding-bottom: max(6px, env(safe-area-inset-bottom)); z-index: 100;
+    }
+    .nav-item {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 4px 0; cursor: pointer; border: none; background: none;
+      color: var(--text-muted); font-size: 9px; font-family: 'Inter', sans-serif;
+      letter-spacing: 0.3px; transition: color 0.2s;
+    }
+    .nav-item.active { color: var(--accent); }
+    .nav-item svg { width: 20px; height: 20px; }
+
+    /* Cards */
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; margin-bottom: 12px; transition: border-color 0.2s;
+    }
+    .card:hover { border-color: var(--accent-glow); }
+    .card-clickable { cursor: pointer; }
+
+    .quote-text {
+      font-family: 'Libre Baskerville', serif; font-size: 14px; line-height: 1.7;
+      color: var(--text-primary); font-style: italic; margin-bottom: 12px;
+    }
+    .quote-text::before { content: '\201C'; color: var(--accent); font-size: 20px; margin-right: 2px; }
+    .quote-text::after { content: '\201D'; color: var(--accent); font-size: 20px; margin-left: 2px; }
+
+    .quote-meta { font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .quote-source { font-weight: 600; color: var(--accent); }
+    .quote-author { color: var(--text-secondary); }
+    .quote-date { color: var(--text-muted); font-size: 11px; }
+
+    .theme-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .theme-tag {
+      background: var(--accent-dim); color: var(--accent); font-size: 11px;
+      padding: 3px 10px; border-radius: 20px; font-weight: 500; letter-spacing: 0.3px;
+      cursor: pointer; border: none; font-family: 'Inter', sans-serif; transition: background 0.2s;
+    }
+    .theme-tag:hover { background: var(--accent-glow); }
+
+    /* Forms */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+    .form-input, .form-textarea, .form-select {
+      width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 12px; color: var(--text-primary);
+      font-size: 14px; font-family: 'Inter', sans-serif; transition: border-color 0.2s; outline: none;
+    }
+    .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); }
+    .form-textarea { resize: vertical; min-height: 100px; font-family: 'Libre Baskerville', serif; line-height: 1.7; }
+    .form-select option { background: var(--bg-secondary); }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500;
+      font-family: 'Inter', sans-serif; cursor: pointer; border: none; transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: var(--bg-primary); }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--accent); }
+    .btn-danger { background: rgba(199,92,92,0.15); color: var(--danger); border: 1px solid rgba(199,92,92,0.3); }
+    .btn-danger:hover { background: rgba(199,92,92,0.25); }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+    /* Voice / Camera */
+    .voice-btn {
+      width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--accent);
+      background: var(--accent-dim); color: var(--accent); display: flex;
+      align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s;
+    }
+    .voice-btn:hover { background: var(--accent-glow); }
+    .voice-btn.recording { background: rgba(199,92,92,0.2); border-color: var(--danger); color: var(--danger); }
+    .voice-btn.recording::after {
+      content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
+      border: 2px solid var(--danger); animation: ripple 1.5s infinite;
+    }
+    .camera-btn {
+      width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--graph-source);
+      background: rgba(122,176,212,0.1); color: var(--graph-source);
+      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
+    }
+    .camera-btn:hover { background: rgba(122,176,212,0.2); }
+
+    .capture-methods { display: flex; gap: 16px; justify-content: center; align-items: center; margin: 20px 0; }
+    .capture-divider { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Search */
+    .search-bar { position: relative; margin-bottom: 16px; }
+    .search-bar input {
+      width: 100%; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px 12px 10px 36px; color: var(--text-primary);
+      font-size: 14px; font-family: 'Inter', sans-serif; outline: none;
+    }
+    .search-bar input:focus { border-color: var(--accent); }
+    .search-bar svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px; height: 18px; }
+
+    /* Filter pills */
+    .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .filter-pill {
+      padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;
+      border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary);
+      font-family: 'Inter', sans-serif; transition: all 0.2s;
+    }
+    .filter-pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+
+    /* Stats */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 10px; text-align: center; }
+    .stat-value { font-size: 24px; font-weight: 700; color: var(--accent); font-family: 'Libre Baskerville', serif; }
+    .stat-label { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+
+    /* Graph */
+    .graph-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; position: relative; }
+    .graph-container svg { width: 100%; display: block; }
+    .graph-legend { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 14px; font-size: 11px; color: var(--text-muted); }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
+    .empty-state svg { width: 60px; height: 60px; margin-bottom: 14px; opacity: 0.4; }
+    .empty-state h3 { font-family: 'Libre Baskerville', serif; font-size: 18px; color: var(--text-secondary); margin-bottom: 8px; }
+    .empty-state p { font-size: 13px; line-height: 1.6; }
+
+    /* Theme input */
+    .theme-input-container {
+      display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg-input);
+      border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: text; transition: border-color 0.2s;
+    }
+    .theme-input-container:focus-within { border-color: var(--accent); }
+    .theme-chip { display: flex; align-items: center; gap: 4px; background: var(--accent-dim); color: var(--accent); padding: 3px 8px; border-radius: 14px; font-size: 12px; }
+    .theme-chip button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+    .theme-input { flex: 1; min-width: 80px; background: none; border: none; color: var(--text-primary); font-size: 13px; outline: none; font-family: 'Inter', sans-serif; }
+
+    .theme-suggestions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+    .theme-suggestion {
+      font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg-card);
+      border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
+      font-family: 'Inter', sans-serif; transition: all 0.2s;
+    }
+    .theme-suggestion:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: var(--bg-card); border: 1px solid var(--accent); color: var(--text-primary);
+      padding: 10px 20px; border-radius: 10px; font-size: 13px; z-index: 300;
+      animation: fadeIn 0.3s ease-out; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .section-title { font-family: 'Libre Baskerville', serif; font-size: 16px; color: var(--text-primary); margin-bottom: 12px; }
+    .detail-back {
+      display: flex; align-items: center; gap: 6px; color: var(--accent); font-size: 13px;
+      cursor: pointer; background: none; border: none; font-family: 'Inter', sans-serif; margin-bottom: 16px;
+    }
+
+    .ocr-loading { text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px; }
+    .ocr-loading .spinner { display: inline-block; width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
+
+    /* ─── Source Library Styles ─── */
+    .source-type-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 10px;
+      font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 4px;
+    }
+    .source-card {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .source-card:hover { border-color: var(--accent-glow); transform: translateY(-1px); }
+    .source-icon {
+      width: 44px; height: 44px; border-radius: 10px; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .source-icon svg { width: 22px; height: 22px; }
+    .source-info { flex: 1; min-width: 0; }
+    .source-name { font-family: 'Libre Baskerville', serif; font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .source-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .source-count {
+      font-size: 20px; font-weight: 700; color: var(--accent);
+      font-family: 'Libre Baskerville', serif; text-align: right; min-width: 30px;
+    }
+
+    .source-group-header {
+      font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px;
+      text-transform: uppercase; margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    }
+    .source-group-header:first-child { margin-top: 0; }
+
+    /* Source detail hero */
+    .source-hero {
+      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
+      padding: 20px; margin-bottom: 16px; text-align: center;
+    }
+    .source-hero-icon {
+      width: 60px; height: 60px; border-radius: 14px; display: inline-flex;
+      align-items: center; justify-content: center; margin-bottom: 12px;
+    }
+    .source-hero-icon svg { width: 28px; height: 28px; }
+    .source-hero-name { font-family: 'Libre Baskerville', serif; font-size: 20px; color: var(--text-primary); margin-bottom: 4px; }
+    .source-hero-author { font-size: 14px; color: var(--text-secondary); }
+    .source-hero-stats { display: flex; justify-content: center; gap: 24px; margin-top: 14px; }
+    .source-hero-stat { text-align: center; }
+    .source-hero-stat-val { font-size: 18px; font-weight: 700; color: var(--accent); }
+    .source-hero-stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+
+    .source-themes-bar {
+      display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px;
+    }
+
+    @media (min-width: 481px) { .app-container { border-left: 1px solid var(--border); border-right: 1px solid var(--border); } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// Register service worker for offline support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      console.log('SW registered:', reg.scope);
+    }).catch(err => console.log('SW registration failed:', err));
+  });
+}
+</script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+// ─── Icons ──────────────────────────────────────────────────
+const Icons = {
+  home: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+  plus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+  search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  graph: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.5" y1="7.5" x2="15.5" y2="16.5" opacity="0.4"/><line x1="15.5" y1="7.5" x2="8.5" y2="16.5" opacity="0.4"/><line x1="6" y1="9" x2="6" y2="15" opacity="0.4"/><line x1="18" y1="9" x2="18" y2="15" opacity="0.4"/></svg>,
+  library: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="9" y1="7" x2="16" y2="7"/><line x1="9" y1="11" x2="14" y2="11"/></svg>,
+  mic: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>,
+  camera: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>,
+  book: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>,
+  person: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+  article: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>,
+  whitepaper: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><circle cx="12" cy="15" r="3"/></svg>,
+  podcast: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 1a7 7 0 00-7 7v4a7 7 0 0014 0V8a7 7 0 00-7-7z" opacity="0.3"/><rect x="9" y="14" width="6" height="8" rx="2"/><path d="M18 8a6 6 0 00-12 0"/><path d="M15 8a3 3 0 00-6 0"/></svg>,
+  conversation: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
+  chevronLeft: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>,
+  x: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
+  edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="16" height="16"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  stop: <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>,
+  other: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+};
+
+const SOURCE_TYPE_CONFIG = {
+  book:         { icon: Icons.book,         color: 'var(--type-book)',         label: 'Books' },
+  article:      { icon: Icons.article,      color: 'var(--type-article)',      label: 'Articles' },
+  whitepaper:   { icon: Icons.whitepaper,   color: 'var(--type-whitepaper)',   label: 'Whitepapers' },
+  podcast:      { icon: Icons.podcast,      color: 'var(--type-podcast)',      label: 'Podcasts' },
+  person:       { icon: Icons.person,       color: 'var(--type-person)',       label: 'People' },
+  conversation: { icon: Icons.conversation, color: 'var(--type-conversation)', label: 'Conversations' },
+  other:        { icon: Icons.other,        color: 'var(--type-other)',        label: 'Other' },
+};
+
+// ─── IndexedDB ──────────────────────────────────────────────
+const DB_NAME = 'commonplace_db';
+const DB_VERSION = 2;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('quotes')) {
+        const qs = db.createObjectStore('quotes', { keyPath: 'id' });
+        qs.createIndex('sourceId', 'sourceId', { unique: false });
+        qs.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+      if (!db.objectStoreNames.contains('sources')) {
+        const ss = db.createObjectStore('sources', { keyPath: 'id' });
+        ss.createIndex('type', 'type', { unique: false });
+        ss.createIndex('name', 'name', { unique: false });
+      }
+      // Migrate v1 quotes store if needed
+      if (e.oldVersion < 2 && db.objectStoreNames.contains('quotes')) {
+        try {
+          const tx = e.target.transaction;
+          const store = tx.objectStore('quotes');
+          if (!store.indexNames.contains('sourceId')) {
+            store.createIndex('sourceId', 'sourceId', { unique: false });
+          }
+        } catch(err) { /* ok */ }
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbGetAll(storeName) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const req = tx.objectStore(storeName).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function dbPut(storeName, item) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).put(item);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function dbDelete(storeName, id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 9); }
+
+// ─── Small Components ───────────────────────────────────────
+function Toast({ message, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 2500); return () => clearTimeout(t); }, [onDone]);
+  return <div className="toast">{message}</div>;
+}
+
+function ThemeInput({ themes, onChange, allThemes }) {
+  const [input, setInput] = useState('');
+  const inputRef = useRef(null);
+  const suggestions = useMemo(() => {
+    if (!input.trim()) return allThemes.filter(t => !themes.includes(t)).slice(0, 8);
+    return allThemes.filter(t => t.toLowerCase().includes(input.toLowerCase()) && !themes.includes(t)).slice(0, 6);
+  }, [input, allThemes, themes]);
+  const addTheme = (theme) => { const t = theme.trim().toLowerCase(); if (t && !themes.includes(t)) onChange([...themes, t]); setInput(''); inputRef.current?.focus(); };
+  const removeTheme = (theme) => onChange(themes.filter(t => t !== theme));
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTheme(input); }
+    else if (e.key === 'Backspace' && !input && themes.length) removeTheme(themes[themes.length - 1]);
+  };
+  return (
+    <div>
+      <div className="theme-input-container" onClick={() => inputRef.current?.focus()}>
+        {themes.map(t => <span className="theme-chip" key={t}>{t}<button onClick={e => { e.stopPropagation(); removeTheme(t); }}>&times;</button></span>)}
+        <input ref={inputRef} className="theme-input" value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={themes.length ? '' : 'Type theme and press Enter...'} />
+      </div>
+      {suggestions.length > 0 && <div className="theme-suggestions">{suggestions.map(s => <button key={s} className="theme-suggestion" onClick={() => addTheme(s)}>{s}</button>)}</div>}
+    </div>
+  );
+}
+
+function SourceTypeBadge({ type }) {
+  const cfg = SOURCE_TYPE_CONFIG[type] || SOURCE_TYPE_CONFIG.other;
+  return (
+    <span className="source-type-badge" style={{ background: cfg.color + '22', color: cfg.color }}>
+      {type}
+    </span>
+  );
+}
+
+// ─── Knowledge Graph ────────────────────────────────────────
+function KnowledgeGraph({ quotes, onNodeClick }) {
+  const svgRef = useRef(null);
+  const containerRef = useRef(null);
+  const simRef = useRef(null);
+
+  useEffect(() => {
+    if (!svgRef.current || quotes.length === 0) return;
+    const width = containerRef.current.clientWidth;
+    const height = 380;
+
+    const themeSet = new Set();
+    const sourceSet = new Set();
+    quotes.forEach(q => { if (q.source) sourceSet.add(q.source); q.themes.forEach(t => themeSet.add(t)); });
+
+    const nodes = []; const nodeMap = {};
+    themeSet.forEach(t => { const n = { id: `theme:${t}`, label: t, type: 'theme', count: 0 }; nodes.push(n); nodeMap[n.id] = n; });
+    sourceSet.forEach(s => { const n = { id: `source:${s}`, label: s, type: 'source', count: 0 }; nodes.push(n); nodeMap[n.id] = n; });
+
+    const linkMap = {};
+    quotes.forEach(q => {
+      if (!q.source) return;
+      const srcId = `source:${q.source}`;
+      if (nodeMap[srcId]) nodeMap[srcId].count++;
+      q.themes.forEach(t => {
+        const thId = `theme:${t}`;
+        if (nodeMap[thId]) nodeMap[thId].count++;
+        const key = `${srcId}|${thId}`;
+        if (!linkMap[key]) linkMap[key] = { source: srcId, target: thId, weight: 0 };
+        linkMap[key].weight++;
+      });
+    });
+    const links = Object.values(linkMap);
+    if (nodes.length === 0) return;
+
+    const svg = d3.select(svgRef.current); svg.selectAll('*').remove(); svg.attr('width', width).attr('height', height);
+    const g = svg.append('g');
+    svg.call(d3.zoom().scaleExtent([0.3, 3]).on('zoom', (e) => g.attr('transform', e.transform)));
+
+    if (simRef.current) simRef.current.stop();
+    const sim = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(80))
+      .force('charge', d3.forceManyBody().strength(-200))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collision', d3.forceCollide().radius(30));
+    simRef.current = sim;
+
+    const link = g.append('g').selectAll('line').data(links).join('line').attr('stroke', 'var(--graph-link)').attr('stroke-width', d => Math.min(d.weight * 1.5, 5));
+    const node = g.append('g').selectAll('g').data(nodes).join('g').style('cursor', 'pointer')
+      .call(d3.drag().on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }).on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; }).on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+    node.append('circle').attr('r', d => Math.max(8, Math.min(d.count * 4 + 6, 24)))
+      .attr('fill', d => d.type === 'theme' ? 'var(--graph-theme)' : 'var(--graph-source)').attr('fill-opacity', 0.2)
+      .attr('stroke', d => d.type === 'theme' ? 'var(--graph-theme)' : 'var(--graph-source)').attr('stroke-width', 1.5);
+    node.append('text').text(d => d.label.length > 14 ? d.label.slice(0, 12) + '...' : d.label)
+      .attr('text-anchor', 'middle').attr('dy', d => Math.max(8, Math.min(d.count * 4 + 6, 24)) + 14)
+      .attr('fill', 'var(--text-secondary)').attr('font-size', '10px').attr('font-family', 'Inter, sans-serif');
+    node.on('click', (e, d) => { if (onNodeClick) onNodeClick(d); });
+
+    sim.on('tick', () => {
+      link.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+      node.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+    return () => sim.stop();
+  }, [quotes, onNodeClick]);
+
+  if (quotes.length === 0) return <div className="empty-state">{Icons.graph}<h3>Your Knowledge Map</h3><p>Add quotes with themes to see how ideas connect.</p></div>;
+  return (
+    <div className="graph-container" ref={containerRef}>
+      <svg ref={svgRef} />
+      <div className="graph-legend">
+        <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--graph-theme)' }} /><span>Theme</span></div>
+        <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--graph-source)' }} /><span>Source</span></div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// ─── MAIN APP ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+function App() {
+  const [quotes, setQuotes] = useState([]);
+  const [sources, setSources] = useState([]);
+  const [view, setView] = useState('home');
+  const [toast, setToast] = useState(null);
+  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [editingQuote, setEditingQuote] = useState(null);
+  const [selectedSource, setSelectedSource] = useState(null);
+  const [browseFilter, setBrowseFilter] = useState(null);
+
+  // Load data
+  useEffect(() => {
+    Promise.all([dbGetAll('quotes'), dbGetAll('sources')]).then(([q, s]) => {
+      setQuotes(q); setSources(s);
+      // Auto-create source entities from legacy quotes that have source text but no sourceId
+      const existingNames = new Set(s.map(src => src.name.toLowerCase()));
+      const newSources = [];
+      q.forEach(quote => {
+        if (quote.source && !quote.sourceId) {
+          const key = quote.source.toLowerCase();
+          if (!existingNames.has(key)) {
+            existingNames.add(key);
+            const ns = { id: genId(), name: quote.source, type: quote.sourceType || 'book', author: quote.author || '', notes: '', createdAt: quote.createdAt };
+            newSources.push(ns);
+          }
+        }
+      });
+      if (newSources.length > 0) {
+        Promise.all(newSources.map(ns => dbPut('sources', ns))).then(() => dbGetAll('sources').then(setSources));
+      }
+    }).catch(console.error);
+  }, []);
+
+  const showToast = (msg) => setToast(msg);
+
+  const refreshData = async () => {
+    const [q, s] = await Promise.all([dbGetAll('quotes'), dbGetAll('sources')]);
+    setQuotes(q); setSources(s);
+  };
+
+  const handleSaveQuote = async (quote) => {
+    await dbPut('quotes', quote);
+    await refreshData();
+    showToast('Quote saved');
+  };
+
+  const handleDeleteQuote = async (id) => {
+    await dbDelete('quotes', id);
+    await refreshData();
+    setSelectedQuote(null);
+    showToast('Quote deleted');
+  };
+
+  const handleSaveSource = async (source) => {
+    await dbPut('sources', source);
+    await refreshData();
+    showToast('Source saved');
+  };
+
+  const handleDeleteSource = async (id) => {
+    await dbDelete('sources', id);
+    await refreshData();
+    setSelectedSource(null);
+    showToast('Source deleted');
+  };
+
+  const allThemes = useMemo(() => { const s = new Set(); quotes.forEach(q => q.themes?.forEach(t => s.add(t))); return Array.from(s).sort(); }, [quotes]);
+  const allSourceNames = useMemo(() => sources.map(s => s.name).sort(), [sources]);
+  const allAuthors = useMemo(() => { const s = new Set(); [...quotes, ...sources].forEach(q => { if (q.author) s.add(q.author); }); return Array.from(s).sort(); }, [quotes, sources]);
+
+  const navigateToSource = useCallback((source) => { setSelectedSource(source); setView('sourceDetail'); }, []);
+  const navigateToBrowse = useCallback((filter) => { setBrowseFilter(filter); setView('browse'); }, []);
+
+  const handleGraphNodeClick = useCallback((node) => {
+    if (node.type === 'theme') navigateToBrowse({ type: 'theme', value: node.label });
+    else if (node.type === 'source') {
+      const src = sources.find(s => s.name === node.label);
+      if (src) navigateToSource(src);
+      else navigateToBrowse({ type: 'source', value: node.label });
+    }
+  }, [sources, navigateToSource, navigateToBrowse]);
+
+  return (
+    <div className="app-container">
+      <header className="app-header"><div><div className="app-title">Commonplace</div><div className="app-subtitle">Your digital commonplace book</div></div></header>
+
+      <div className="app-content">
+        {view === 'home' && <HomeView quotes={quotes} sources={sources} onSelectQuote={q => { setSelectedQuote(q); setView('detail'); }} onNavigate={setView} onSelectSource={navigateToSource} />}
+        {view === 'add' && <AddQuoteView onSave={handleSaveQuote} onSaveSource={handleSaveSource} allThemes={allThemes} sources={sources} allAuthors={allAuthors} editingQuote={editingQuote} onCancelEdit={() => { setEditingQuote(null); setView('home'); }} />}
+        {view === 'library' && <LibraryView sources={sources} quotes={quotes} onSelectSource={navigateToSource} onSaveSource={handleSaveSource} />}
+        {view === 'sourceDetail' && selectedSource && <SourceDetailView source={selectedSource} quotes={quotes} allThemes={allThemes} onBack={() => setView('library')} onSelectQuote={q => { setSelectedQuote(q); setView('detail'); }} onDelete={handleDeleteSource} onEdit={handleSaveSource} />}
+        {view === 'browse' && <BrowseView quotes={quotes} allThemes={allThemes} sources={sources} onSelectQuote={q => { setSelectedQuote(q); setView('detail'); }} initialFilter={browseFilter} />}
+        {view === 'graph' && <GraphView quotes={quotes} onNodeClick={handleGraphNodeClick} />}
+        {view === 'detail' && selectedQuote && <DetailView quote={selectedQuote} onBack={() => setView('browse')} onDelete={handleDeleteQuote} onEdit={q => { setEditingQuote(q); setView('add'); }} quotes={quotes} sources={sources} onSelectQuote={q => setSelectedQuote(q)} onSelectSource={navigateToSource} />}
+      </div>
+
+      <nav className="bottom-nav">
+        <button className={`nav-item ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>{Icons.home}<span>Home</span></button>
+        <button className={`nav-item ${view === 'add' ? 'active' : ''}`} onClick={() => { setEditingQuote(null); setView('add'); }}>{Icons.plus}<span>Capture</span></button>
+        <button className={`nav-item ${view === 'library' || view === 'sourceDetail' ? 'active' : ''}`} onClick={() => setView('library')}>{Icons.library}<span>Library</span></button>
+        <button className={`nav-item ${view === 'browse' || view === 'detail' ? 'active' : ''}`} onClick={() => { setBrowseFilter(null); setView('browse'); }}>{Icons.search}<span>Browse</span></button>
+        <button className={`nav-item ${view === 'graph' ? 'active' : ''}`} onClick={() => setView('graph')}>{Icons.graph}<span>Map</span></button>
+      </nav>
+
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+    </div>
+  );
+}
+
+// ─── Home View ──────────────────────────────────────────────
+function HomeView({ quotes, sources, onSelectQuote, onNavigate, onSelectSource }) {
+  const sorted = useMemo(() => [...quotes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)), [quotes]);
+  const themeCount = useMemo(() => { const s = new Set(); quotes.forEach(q => q.themes?.forEach(t => s.add(t))); return s.size; }, [quotes]);
+  const recentSources = useMemo(() => {
+    const sourceQuoteMap = {};
+    quotes.forEach(q => {
+      if (q.sourceId) { if (!sourceQuoteMap[q.sourceId] || new Date(q.createdAt) > new Date(sourceQuoteMap[q.sourceId])) sourceQuoteMap[q.sourceId] = q.createdAt; }
+    });
+    return sources.map(s => ({ ...s, lastActivity: sourceQuoteMap[s.id] || s.createdAt })).sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity)).slice(0, 4);
+  }, [sources, quotes]);
+
+  if (quotes.length === 0) return (
+    <div className="fade-in"><div className="empty-state" style={{ paddingTop: 80 }}>{Icons.book}<h3>Welcome to Commonplace</h3><p>Capture the words that move you — from books, conversations, or anywhere. Speak them, photograph them, or type them in.</p><div style={{ marginTop: 20 }}><button className="btn btn-primary" onClick={() => onNavigate('add')}>Capture Your First Quote</button></div></div></div>
+  );
+
+  return (
+    <div className="fade-in">
+      <div className="stats-row">
+        <div className="stat-card"><div className="stat-value">{quotes.length}</div><div className="stat-label">Quotes</div></div>
+        <div className="stat-card"><div className="stat-value">{sources.length}</div><div className="stat-label">Sources</div></div>
+        <div className="stat-card"><div className="stat-value">{themeCount}</div><div className="stat-label">Themes</div></div>
+      </div>
+
+      {recentSources.length > 0 && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <div className="section-title" style={{ marginBottom: 0 }}>Your Shelf</div>
+            <button className="btn btn-sm btn-secondary" onClick={() => onNavigate('library')}>View All</button>
+          </div>
+          {recentSources.map(s => {
+            const cfg = SOURCE_TYPE_CONFIG[s.type] || SOURCE_TYPE_CONFIG.other;
+            const qCount = quotes.filter(q => q.sourceId === s.id || (q.source && q.source.toLowerCase() === s.name.toLowerCase())).length;
+            return (
+              <div key={s.id} className="source-card" onClick={() => onSelectSource(s)}>
+                <div className="source-icon" style={{ background: cfg.color + '22', color: cfg.color }}>{cfg.icon}</div>
+                <div className="source-info"><div className="source-name">{s.name}</div><div className="source-detail">{s.author ? s.author + ' · ' : ''}{s.type}</div></div>
+                <div className="source-count">{qCount}</div>
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      <div className="section-title" style={{ marginTop: 16 }}>Recently Captured</div>
+      {sorted.slice(0, 5).map(q => <QuoteCard key={q.id} quote={q} onClick={() => onSelectQuote(q)} />)}
+      {quotes.length > 5 && <button className="btn btn-secondary btn-full" style={{ marginTop: 4 }} onClick={() => onNavigate('browse')}>View All {quotes.length} Quotes</button>}
+    </div>
+  );
+}
+
+// ─── Quote Card ─────────────────────────────────────────────
+function QuoteCard({ quote, onClick }) {
+  const displayText = quote.text?.length > 160 ? quote.text.slice(0, 157) + '...' : (quote.text || '');
+  return (
+    <div className="card card-clickable" onClick={onClick}>
+      <div className="quote-text">{displayText}</div>
+      <div className="quote-meta">
+        {quote.source && <span className="quote-source">{quote.source}</span>}
+        {quote.author && <span className="quote-author">— {quote.author}</span>}
+        <span className="quote-date">{new Date(quote.date || quote.createdAt).toLocaleDateString()}</span>
+      </div>
+      {quote.themes?.length > 0 && <div className="theme-tags">{quote.themes.map(t => <span key={t} className="theme-tag">{t}</span>)}</div>}
+    </div>
+  );
+}
+
+// ─── Add Quote View ─────────────────────────────────────────
+function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, editingQuote, onCancelEdit }) {
+  const isEditing = !!editingQuote;
+  const [text, setText] = useState(editingQuote?.text || '');
+  const [sourceId, setSourceId] = useState(editingQuote?.sourceId || '');
+  const [sourceName, setSourceName] = useState(editingQuote?.source || '');
+  const [sourceType, setSourceType] = useState(editingQuote?.sourceType || 'book');
+  const [author, setAuthor] = useState(editingQuote?.author || '');
+  const [themes, setThemes] = useState(editingQuote?.themes || []);
+  const [date, setDate] = useState(editingQuote?.date || new Date().toISOString().slice(0, 10));
+  const [notes, setNotes] = useState(editingQuote?.notes || '');
+  const [recording, setRecording] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [showNewSource, setShowNewSource] = useState(false);
+  const recognitionRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // When selecting an existing source, auto-fill author
+  const handleSourceSelect = (id) => {
+    setSourceId(id);
+    if (id) {
+      const src = sources.find(s => s.id === id);
+      if (src) { setSourceName(src.name); setAuthor(src.author || author); setSourceType(src.type); setShowNewSource(false); }
+    } else {
+      setSourceName(''); setShowNewSource(false);
+    }
+  };
+
+  // Voice recording
+  const toggleRecording = () => {
+    if (recording) { recognitionRef.current?.stop(); setRecording(false); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { alert('Speech recognition not supported. Try Chrome on your phone.'); return; }
+    const recog = new SR(); recog.continuous = true; recog.interimResults = true; recog.lang = 'en-GB';
+    let final = text;
+    recog.onresult = (e) => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) final += (final ? ' ' : '') + e.results[i][0].transcript; else interim += e.results[i][0].transcript; } setText(final + (interim ? ' ' + interim : '')); };
+    recog.onend = () => setRecording(false);
+    recog.onerror = () => setRecording(false);
+    recognitionRef.current = recog; recog.start(); setRecording(true);
+  };
+
+  // OCR
+  const handleImageCapture = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    setOcrLoading(true);
+    try {
+      const result = await Tesseract.recognize(file, 'eng', { logger: () => {} });
+      const extracted = result.data.text.trim();
+      if (extracted) setText(prev => (prev ? prev + '\n\n' : '') + extracted);
+      else alert('No text extracted. Try a clearer photo.');
+    } catch { alert('Error processing image.'); }
+    finally { setOcrLoading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
+  };
+
+  const handleSubmit = async () => {
+    if (!text.trim()) return;
+
+    // If creating a new source, save it first
+    let finalSourceId = sourceId;
+    if (showNewSource && sourceName.trim()) {
+      const newSource = { id: genId(), name: sourceName.trim(), type: sourceType, author: author.trim(), notes: '', createdAt: new Date().toISOString() };
+      await onSaveSource(newSource);
+      finalSourceId = newSource.id;
+    }
+
+    const quote = {
+      id: editingQuote?.id || genId(),
+      text: text.trim(),
+      source: sourceName.trim(),
+      sourceId: finalSourceId,
+      sourceType,
+      author: author.trim(),
+      themes: themes.filter(t => t.trim()),
+      date, notes: notes.trim(),
+      createdAt: editingQuote?.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    onSave(quote);
+    if (!isEditing) { setText(''); setSourceId(''); setSourceName(''); setAuthor(''); setThemes([]); setNotes(''); setDate(new Date().toISOString().slice(0, 10)); setShowNewSource(false); }
+  };
+
+  return (
+    <div className="fade-in">
+      <div className="section-title">{isEditing ? 'Edit Quote' : 'Capture a Quote'}</div>
+
+      {!isEditing && (
+        <>
+          <div className="capture-methods">
+            <button className={`voice-btn ${recording ? 'recording' : ''}`} onClick={toggleRecording}>{recording ? Icons.stop : Icons.mic}</button>
+            <div className="capture-divider">or</div>
+            <button className="camera-btn" onClick={() => fileInputRef.current?.click()}>{Icons.camera}</button>
+            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleImageCapture} />
+          </div>
+          {recording && <div style={{ textAlign: 'center', marginBottom: 12 }}><span style={{ color: 'var(--danger)', fontSize: 12, animation: 'pulse 1.5s infinite' }}>Listening... speak your quote</span></div>}
+          {ocrLoading && <div className="ocr-loading"><div className="spinner" /><br />Extracting text from image...</div>}
+        </>
+      )}
+
+      <div className="form-group">
+        <label className="form-label">Quote</label>
+        <textarea className="form-textarea" value={text} onChange={e => setText(e.target.value)} placeholder="The words you want to remember..." rows={5} />
+      </div>
+
+      {/* Source selection */}
+      <div className="form-group">
+        <label className="form-label">Source</label>
+        {!showNewSource ? (
+          <div>
+            <select className="form-select" value={sourceId} onChange={e => { if (e.target.value === '__new__') { setSourceId(''); setSourceName(''); setShowNewSource(true); } else handleSourceSelect(e.target.value); }}>
+              <option value="">Select a source...</option>
+              {Object.keys(SOURCE_TYPE_CONFIG).map(type => {
+                const typeSources = sources.filter(s => s.type === type);
+                if (typeSources.length === 0) return null;
+                return <optgroup key={type} label={SOURCE_TYPE_CONFIG[type].label}>{typeSources.map(s => <option key={s.id} value={s.id}>{s.name}{s.author ? ` — ${s.author}` : ''}</option>)}</optgroup>;
+              })}
+              <option value="__new__">+ Add new source...</option>
+            </select>
+          </div>
+        ) : (
+          <div style={{ background: 'var(--bg-input)', border: '1px solid var(--accent)', borderRadius: 8, padding: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>New Source</span>
+              <button className="btn btn-sm btn-secondary" onClick={() => setShowNewSource(false)}>Cancel</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div>
+                <label className="form-label">Type</label>
+                <select className="form-select" value={sourceType} onChange={e => setSourceType(e.target.value)}>
+                  {Object.entries(SOURCE_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Author</label>
+                <input className="form-input" value={author} onChange={e => setAuthor(e.target.value)} placeholder="e.g. Marcus Aurelius" list="author-suggestions" />
+                <datalist id="author-suggestions">{allAuthors.map(a => <option key={a} value={a} />)}</datalist>
+              </div>
+            </div>
+            <label className="form-label">Name</label>
+            <input className="form-input" value={sourceName} onChange={e => setSourceName(e.target.value)} placeholder="e.g. Meditations, or Sarah" autoFocus />
+          </div>
+        )}
+      </div>
+
+      {!showNewSource && sourceId && (
+        <div className="form-group">
+          <label className="form-label">Author (override)</label>
+          <input className="form-input" value={author} onChange={e => setAuthor(e.target.value)} placeholder="e.g. Marcus Aurelius" list="author-suggestions2" />
+          <datalist id="author-suggestions2">{allAuthors.map(a => <option key={a} value={a} />)}</datalist>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-group">
+          <label className="form-label">Date</label>
+          <input type="date" className="form-input" value={date} onChange={e => setDate(e.target.value)} />
+        </div>
+        {!showNewSource && !sourceId && (
+          <div className="form-group">
+            <label className="form-label">Source Type</label>
+            <select className="form-select" value={sourceType} onChange={e => setSourceType(e.target.value)}>
+              {Object.entries(SOURCE_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+            </select>
+          </div>
+        )}
+      </div>
+
+      <div className="form-group"><label className="form-label">Themes</label><ThemeInput themes={themes} onChange={setThemes} allThemes={allThemes} /></div>
+      <div className="form-group">
+        <label className="form-label">Personal Notes (optional)</label>
+        <textarea className="form-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Why does this resonate?" rows={3} style={{ fontFamily: "'Inter', sans-serif", fontSize: 13 }} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button className="btn btn-primary btn-full" onClick={handleSubmit} disabled={!text.trim()}>{isEditing ? 'Update Quote' : 'Save Quote'}</button>
+        {isEditing && <button className="btn btn-secondary" onClick={onCancelEdit}>Cancel</button>}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// ─── LIBRARY VIEW ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+function LibraryView({ sources, quotes, onSelectSource, onSaveSource }) {
+  const [search, setSearch] = useState('');
+  const [filterType, setFilterType] = useState(null);
+  const [showAddSource, setShowAddSource] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newType, setNewType] = useState('book');
+  const [newAuthor, setNewAuthor] = useState('');
+
+  const quoteCountMap = useMemo(() => {
+    const map = {};
+    quotes.forEach(q => {
+      if (q.sourceId) map[q.sourceId] = (map[q.sourceId] || 0) + 1;
+      // Also match by name for legacy quotes
+      if (q.source) {
+        const matchSrc = sources.find(s => s.name.toLowerCase() === q.source.toLowerCase());
+        if (matchSrc && matchSrc.id !== q.sourceId) map[matchSrc.id] = (map[matchSrc.id] || 0) + 1;
+      }
+    });
+    return map;
+  }, [quotes, sources]);
+
+  const filtered = useMemo(() => {
+    let result = [...sources];
+    if (search.trim()) { const q = search.toLowerCase(); result = result.filter(s => s.name.toLowerCase().includes(q) || s.author?.toLowerCase().includes(q)); }
+    if (filterType) result = result.filter(s => s.type === filterType);
+    return result;
+  }, [sources, search, filterType]);
+
+  // Group by type
+  const grouped = useMemo(() => {
+    const groups = {};
+    filtered.forEach(s => {
+      const type = s.type || 'other';
+      if (!groups[type]) groups[type] = [];
+      groups[type].push(s);
+    });
+    // Sort groups by configured order
+    const order = ['book', 'article', 'whitepaper', 'podcast', 'person', 'conversation', 'other'];
+    const sorted = {};
+    order.forEach(t => { if (groups[t]) sorted[t] = groups[t].sort((a, b) => a.name.localeCompare(b.name)); });
+    return sorted;
+  }, [filtered]);
+
+  const activeTypes = useMemo(() => { const s = new Set(); sources.forEach(src => s.add(src.type)); return Array.from(s); }, [sources]);
+
+  const handleAddSource = async () => {
+    if (!newName.trim()) return;
+    const source = { id: genId(), name: newName.trim(), type: newType, author: newAuthor.trim(), notes: '', createdAt: new Date().toISOString() };
+    await onSaveSource(source);
+    setNewName(''); setNewAuthor(''); setShowAddSource(false);
+  };
+
+  return (
+    <div className="fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div className="section-title" style={{ marginBottom: 0 }}>Library</div>
+        <button className="btn btn-sm btn-primary" onClick={() => setShowAddSource(!showAddSource)}>{showAddSource ? 'Cancel' : '+ Source'}</button>
+      </div>
+
+      {showAddSource && (
+        <div className="card slide-up" style={{ marginBottom: 14, borderColor: 'var(--accent)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+            <div><label className="form-label">Type</label><select className="form-select" value={newType} onChange={e => setNewType(e.target.value)}>{Object.entries(SOURCE_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+            <div><label className="form-label">Author</label><input className="form-input" value={newAuthor} onChange={e => setNewAuthor(e.target.value)} placeholder="Optional" /></div>
+          </div>
+          <label className="form-label">Name</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="form-input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Meditations, Nature article..." autoFocus />
+            <button className="btn btn-primary btn-sm" onClick={handleAddSource} disabled={!newName.trim()}>Add</button>
+          </div>
+        </div>
+      )}
+
+      <div className="search-bar">{Icons.search}<input placeholder="Search sources..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+
+      <div className="filter-row">
+        <button className={`filter-pill ${!filterType ? 'active' : ''}`} onClick={() => setFilterType(null)}>All ({sources.length})</button>
+        {activeTypes.map(t => {
+          const cfg = SOURCE_TYPE_CONFIG[t] || SOURCE_TYPE_CONFIG.other;
+          const count = sources.filter(s => s.type === t).length;
+          return <button key={t} className={`filter-pill ${filterType === t ? 'active' : ''}`} onClick={() => setFilterType(filterType === t ? null : t)}>{cfg.label} ({count})</button>;
+        })}
+      </div>
+
+      {Object.keys(grouped).length === 0 ? (
+        <div className="empty-state">{Icons.library}<h3>No sources yet</h3><p>Sources are created automatically when you capture quotes, or you can add them manually above.</p></div>
+      ) : (
+        Object.entries(grouped).map(([type, srcs]) => {
+          const cfg = SOURCE_TYPE_CONFIG[type] || SOURCE_TYPE_CONFIG.other;
+          return (
+            <div key={type}>
+              {!filterType && <div className="source-group-header">{cfg.label}</div>}
+              {srcs.map(s => (
+                <div key={s.id} className="source-card" onClick={() => onSelectSource(s)}>
+                  <div className="source-icon" style={{ background: cfg.color + '22', color: cfg.color }}>{cfg.icon}</div>
+                  <div className="source-info"><div className="source-name">{s.name}</div><div className="source-detail">{s.author ? s.author : 'Unknown author'}</div></div>
+                  <div className="source-count">{quoteCountMap[s.id] || 0}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// ─── SOURCE DETAIL VIEW ──────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+function SourceDetailView({ source, quotes, allThemes, onBack, onSelectQuote, onDelete, onEdit }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState(source.name);
+  const [editAuthor, setEditAuthor] = useState(source.author || '');
+  const [editType, setEditType] = useState(source.type);
+  const [editNotes, setEditNotes] = useState(source.notes || '');
+
+  const cfg = SOURCE_TYPE_CONFIG[source.type] || SOURCE_TYPE_CONFIG.other;
+
+  const sourceQuotes = useMemo(() => {
+    return quotes.filter(q => q.sourceId === source.id || (q.source && q.source.toLowerCase() === source.name.toLowerCase()))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }, [quotes, source]);
+
+  const sourceThemes = useMemo(() => {
+    const map = {};
+    sourceQuotes.forEach(q => q.themes?.forEach(t => { map[t] = (map[t] || 0) + 1; }));
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [sourceQuotes]);
+
+  const handleSaveEdit = () => {
+    onEdit({ ...source, name: editName.trim(), author: editAuthor.trim(), type: editType, notes: editNotes.trim() });
+    setEditing(false);
+  };
+
+  return (
+    <div className="fade-in">
+      <button className="detail-back" onClick={onBack}>{Icons.chevronLeft} Back to Library</button>
+
+      {!editing ? (
+        <div className="source-hero">
+          <div className="source-hero-icon" style={{ background: cfg.color + '22', color: cfg.color }}>{cfg.icon}</div>
+          <div className="source-hero-name">{source.name}</div>
+          {source.author && <div className="source-hero-author">by {source.author}</div>}
+          <SourceTypeBadge type={source.type} />
+
+          <div className="source-hero-stats">
+            <div className="source-hero-stat"><div className="source-hero-stat-val">{sourceQuotes.length}</div><div className="source-hero-stat-lbl">Quotes</div></div>
+            <div className="source-hero-stat"><div className="source-hero-stat-val">{sourceThemes.length}</div><div className="source-hero-stat-lbl">Themes</div></div>
+          </div>
+
+          {sourceThemes.length > 0 && (
+            <div className="source-themes-bar">
+              {sourceThemes.slice(0, 6).map(([t, count]) => <span key={t} className="theme-tag">{t} ({count})</span>)}
+            </div>
+          )}
+
+          {source.notes && (
+            <div style={{ marginTop: 14, padding: 12, background: 'var(--accent-dim)', borderRadius: 8, textAlign: 'left' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Notes</div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{source.notes}</div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="card" style={{ borderColor: 'var(--accent)', marginBottom: 16 }}>
+          <div className="section-title">Edit Source</div>
+          <div className="form-group"><label className="form-label">Name</label><input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="form-group"><label className="form-label">Type</label><select className="form-select" value={editType} onChange={e => setEditType(e.target.value)}>{Object.entries(SOURCE_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+            <div className="form-group"><label className="form-label">Author</label><input className="form-input" value={editAuthor} onChange={e => setEditAuthor(e.target.value)} /></div>
+          </div>
+          <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} style={{ fontFamily: "'Inter', sans-serif", fontSize: 13 }} placeholder="Your thoughts on this source..." /></div>
+          <div style={{ display: 'flex', gap: 10 }}><button className="btn btn-primary btn-full" onClick={handleSaveEdit}>Save</button><button className="btn btn-secondary" onClick={() => setEditing(false)}>Cancel</button></div>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+        <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditing(true)}>{Icons.edit} Edit Source</button>
+        {!confirmDelete
+          ? <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => setConfirmDelete(true)}>{Icons.trash} Delete</button>
+          : <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => onDelete(source.id)}>Confirm?</button>
+        }
+      </div>
+
+      {sourceQuotes.length > 0 && (
+        <>
+          <div className="section-title">Quotes ({sourceQuotes.length})</div>
+          {sourceQuotes.map(q => <QuoteCard key={q.id} quote={q} onClick={() => onSelectQuote(q)} />)}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Browse View ────────────────────────────────────────────
+function BrowseView({ quotes, allThemes, sources, onSelectQuote, initialFilter }) {
+  const [search, setSearch] = useState(initialFilter?.type === 'source' ? initialFilter.value : '');
+  const [filterTheme, setFilterTheme] = useState(initialFilter?.type === 'theme' ? initialFilter.value : null);
+  const [sortBy, setSortBy] = useState('newest');
+
+  const filtered = useMemo(() => {
+    let result = [...quotes];
+    if (search.trim()) { const q = search.toLowerCase(); result = result.filter(r => r.text?.toLowerCase().includes(q) || r.source?.toLowerCase().includes(q) || r.author?.toLowerCase().includes(q) || r.notes?.toLowerCase().includes(q)); }
+    if (filterTheme) result = result.filter(r => r.themes?.includes(filterTheme));
+    if (sortBy === 'newest') result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    else if (sortBy === 'oldest') result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    else if (sortBy === 'source') result.sort((a, b) => (a.source || '').localeCompare(b.source || ''));
+    return result;
+  }, [quotes, search, filterTheme, sortBy]);
+
+  return (
+    <div className="fade-in">
+      <div className="search-bar">{Icons.search}<input placeholder="Search quotes, books, people..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+      <div className="filter-row">
+        <button className={`filter-pill ${!filterTheme ? 'active' : ''}`} onClick={() => setFilterTheme(null)}>All</button>
+        {allThemes.slice(0, 6).map(t => <button key={t} className={`filter-pill ${filterTheme === t ? 'active' : ''}`} onClick={() => setFilterTheme(filterTheme === t ? null : t)}>{t}</button>)}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{filtered.length} quote{filtered.length !== 1 ? 's' : ''}</span>
+        <select className="form-select" style={{ width: 'auto', padding: '4px 8px', fontSize: 12 }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+          <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="source">By source</option>
+        </select>
+      </div>
+      {filtered.length === 0 ? <div className="empty-state">{Icons.search}<h3>No quotes found</h3><p>Try a different search or clear filters.</p></div>
+        : filtered.map(q => <QuoteCard key={q.id} quote={q} onClick={() => onSelectQuote(q)} />)}
+    </div>
+  );
+}
+
+// ─── Detail View ────────────────────────────────────────────
+function DetailView({ quote, onBack, onDelete, onEdit, quotes, sources, onSelectQuote, onSelectSource }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const linkedSource = useMemo(() => {
+    if (quote.sourceId) return sources.find(s => s.id === quote.sourceId);
+    if (quote.source) return sources.find(s => s.name.toLowerCase() === quote.source.toLowerCase());
+    return null;
+  }, [quote, sources]);
+
+  const related = useMemo(() =>
+    quotes.filter(q => { if (q.id === quote.id) return false; if (q.source && q.source === quote.source) return true; return q.themes?.some(t => quote.themes?.includes(t)); }).slice(0, 3),
+    [quotes, quote]
+  );
+
+  return (
+    <div className="fade-in">
+      <button className="detail-back" onClick={onBack}>{Icons.chevronLeft} Back</button>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="quote-text" style={{ fontSize: 16, lineHeight: 1.8 }}>{quote.text}</div>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 12 }}>
+          <div className="quote-meta" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+            {quote.source && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: linkedSource ? 'pointer' : 'default' }} onClick={() => linkedSource && onSelectSource(linkedSource)}>
+                {(SOURCE_TYPE_CONFIG[quote.sourceType] || SOURCE_TYPE_CONFIG.other).icon}
+                <span className="quote-source" style={{ textDecoration: linkedSource ? 'underline' : 'none' }}>{quote.source}</span>
+                <SourceTypeBadge type={quote.sourceType || 'other'} />
+              </div>
+            )}
+            {quote.author && <div className="quote-author">by {quote.author}</div>}
+            <div className="quote-date">{new Date(quote.date || quote.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          </div>
+        </div>
+        {quote.themes?.length > 0 && <div className="theme-tags" style={{ marginTop: 12 }}>{quote.themes.map(t => <span key={t} className="theme-tag">{t}</span>)}</div>}
+        {quote.notes && (
+          <div style={{ marginTop: 14, padding: 12, background: 'var(--accent-dim)', borderRadius: 8 }}>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Your Notes</div>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{quote.notes}</div>
+          </div>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+        <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => onEdit(quote)}>{Icons.edit} Edit</button>
+        {!confirmDelete ? <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => setConfirmDelete(true)}>{Icons.trash} Delete</button>
+          : <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => onDelete(quote.id)}>Confirm?</button>}
+      </div>
+      {related.length > 0 && <><div className="section-title">Related Quotes</div>{related.map(q => <QuoteCard key={q.id} quote={q} onClick={() => onSelectQuote(q)} />)}</>}
+    </div>
+  );
+}
+
+// ─── Graph View ─────────────────────────────────────────────
+function GraphView({ quotes, onNodeClick }) {
+  return (
+    <div className="fade-in">
+      <div className="section-title">Knowledge Map</div>
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>Themes and sources as nodes. Tap a node to explore. Drag to rearrange, pinch to zoom.</p>
+      <KnowledgeGraph quotes={quotes} onNodeClick={onNodeClick} />
+    </div>
+  );
+}
+
+// ─── Render ─────────────────────────────────────────────────
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
