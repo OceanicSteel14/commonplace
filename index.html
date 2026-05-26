@@ -892,6 +892,7 @@ function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, ed
   const [recording, setRecording] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
   const [showNewSource, setShowNewSource] = useState(false);
+  const [saving, setSaving] = useState(false);
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -921,17 +922,19 @@ function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, ed
   };
 
   const handleSubmit = async () => {
-    if (!text.trim()) return;
-    let fSourceId = sourceId;
-    if (showNewSource && sourceName.trim()) {
-      const ns = { id: genId(), name: sourceName.trim(), type: sourceType, author: author.trim(), notes: '', createdAt: new Date().toISOString() };
-      await onSaveSource(ns); fSourceId = ns.id;
-    }
-    const quote = { id: editingQuote?.id || genId(), text: text.trim(), source: sourceName.trim(), sourceId: fSourceId, sourceType, author: author.trim(), themes: themes.filter(t => t.trim()), aiThemes: editingQuote?.aiThemes || [], aiAnalyzed: editingQuote?.aiAnalyzed || false, date, notes: notes.trim(), createdAt: editingQuote?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+    if (!text.trim() || saving) return;
+    setSaving(true);
     try {
+      let fSourceId = sourceId;
+      if (showNewSource && sourceName.trim()) {
+        const ns = { id: genId(), name: sourceName.trim(), type: sourceType, author: author.trim(), notes: '', createdAt: new Date().toISOString() };
+        await onSaveSource(ns); fSourceId = ns.id;
+      }
+      const quote = { id: editingQuote?.id || genId(), text: text.trim(), source: sourceName.trim() || '', sourceId: fSourceId || '', sourceType: sourceType || 'book', author: author.trim() || '', themes: themes.filter(t => t.trim()), aiThemes: editingQuote?.aiThemes || [], aiAnalyzed: editingQuote?.aiAnalyzed || false, date: date || new Date().toISOString().slice(0, 10), notes: notes.trim() || '', createdAt: editingQuote?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
       await onSave(quote);
       if (!isEditing) { setText(''); setSourceId(''); setSourceName(''); setAuthor(''); setThemes([]); setNotes(''); setDate(new Date().toISOString().slice(0, 10)); setShowNewSource(false); }
     } catch (err) { console.error('Save failed:', err); alert('Save failed: ' + err.message); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -984,7 +987,7 @@ function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, ed
       <div className="form-group"><label className="form-label">Personal Notes</label><textarea className="form-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Why does this resonate?" rows={3} style={{ fontFamily: "'Inter', sans-serif", fontSize: 13 }} /></div>
 
       <div style={{ display: 'flex', gap: 10 }}>
-        <button className="btn btn-primary btn-full" onClick={handleSubmit} disabled={!text.trim()}>{isEditing ? 'Update Quote' : 'Save Quote'}</button>
+        <button className="btn btn-primary btn-full" onClick={handleSubmit} disabled={!text.trim() || saving}>{saving ? 'Saving...' : (isEditing ? 'Update Quote' : 'Save Quote')}</button>
         {isEditing && <button className="btn btn-secondary" onClick={onCancelEdit}>Cancel</button>}
       </div>
     </div>
