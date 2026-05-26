@@ -665,6 +665,20 @@ function App() {
     const dl = dataLayerRef.current;
     const [q, s, c] = await Promise.all([dl.all('quotes'), dl.all('sources'), dl.all('connections')]);
     setQuotes(q); setSources(s); setConnections(c);
+    // Auto-create source objects for quotes that have a source name but no matching source
+    const existing = new Set(s.map(x => x.name.toLowerCase()));
+    const newSrcs = [];
+    q.forEach(quote => {
+      if (quote.source && !quote.sourceId) {
+        const key = quote.source.toLowerCase();
+        if (!existing.has(key)) { existing.add(key); newSrcs.push({ id: genId(), name: quote.source, type: quote.sourceType || 'book', author: quote.author || '', notes: '', createdAt: quote.createdAt || new Date().toISOString() }); }
+      }
+    });
+    if (newSrcs.length) {
+      await Promise.all(newSrcs.map(ns => dl.put('sources', ns)));
+      const s2 = await dl.all('sources');
+      setSources(s2);
+    }
   };
 
   // Auth handlers
