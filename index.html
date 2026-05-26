@@ -275,7 +275,11 @@ function initFirebase(config) {
 // Firestore helpers — data stored under users/{uid}/{collection}/{docId}
 function fsCol(uid, collection) { return firebaseDb.collection('users').doc(uid).collection(collection); }
 async function fsAll(uid, collection) { const snap = await fsCol(uid, collection).get(); return snap.docs.map(d => ({ ...d.data(), id: d.id })); }
-async function fsPut(uid, collection, item) { await fsCol(uid, collection).doc(item.id).set(item); }
+async function fsPut(uid, collection, item) {
+  // Firestore rejects undefined values — strip them out
+  const clean = JSON.parse(JSON.stringify(item));
+  await fsCol(uid, collection).doc(item.id).set(clean);
+}
 async function fsDel(uid, collection, id) { await fsCol(uid, collection).doc(id).delete(); }
 
 // Unified data layer — returns same interface whether local or cloud
@@ -924,8 +928,10 @@ function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, ed
       await onSaveSource(ns); fSourceId = ns.id;
     }
     const quote = { id: editingQuote?.id || genId(), text: text.trim(), source: sourceName.trim(), sourceId: fSourceId, sourceType, author: author.trim(), themes: themes.filter(t => t.trim()), aiThemes: editingQuote?.aiThemes || [], aiAnalyzed: editingQuote?.aiAnalyzed || false, date, notes: notes.trim(), createdAt: editingQuote?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
-    onSave(quote);
-    if (!isEditing) { setText(''); setSourceId(''); setSourceName(''); setAuthor(''); setThemes([]); setNotes(''); setDate(new Date().toISOString().slice(0, 10)); setShowNewSource(false); }
+    try {
+      await onSave(quote);
+      if (!isEditing) { setText(''); setSourceId(''); setSourceName(''); setAuthor(''); setThemes([]); setNotes(''); setDate(new Date().toISOString().slice(0, 10)); setShowNewSource(false); }
+    } catch (err) { console.error('Save failed:', err); alert('Save failed: ' + err.message); }
   };
 
   return (
