@@ -14,291 +14,166 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg-primary: #1a1612;
-      --bg-secondary: #241f1a;
-      --bg-card: #2a2420;
-      --bg-input: #1e1915;
-      --text-primary: #f0e6d6;
-      --text-secondary: #b8a898;
-      --text-muted: #7a6b5d;
-      --accent: #d4a574;
-      --accent-hover: #e0b88a;
-      --accent-dim: rgba(212,165,116,0.15);
-      --accent-glow: rgba(212,165,116,0.3);
-      --border: #3a3228;
-      --danger: #c75c5c;
-      --success: #6dab6d;
-      --graph-theme: #d4a574;
-      --graph-source: #7ab0d4;
-      --graph-link: rgba(212,165,116,0.25);
-      --type-book: #d4a574;
-      --type-article: #7ab0d4;
-      --type-whitepaper: #a87bd4;
-      --type-podcast: #6dab6d;
-      --type-person: #d47a8a;
-      --type-conversation: #d4c57a;
-      --type-other: #8a8a8a;
+      --bg-primary: #1a1612; --bg-secondary: #241f1a; --bg-card: #2a2420; --bg-input: #1e1915;
+      --text-primary: #f0e6d6; --text-secondary: #b8a898; --text-muted: #7a6b5d;
+      --accent: #d4a574; --accent-hover: #e0b88a; --accent-dim: rgba(212,165,116,0.15); --accent-glow: rgba(212,165,116,0.3);
+      --border: #3a3228; --danger: #c75c5c; --success: #6dab6d;
+      --graph-theme: #d4a574; --graph-source: #7ab0d4; --graph-link: rgba(212,165,116,0.25);
+      --graph-quote: #e8d5c0; --graph-connection: #a87bd4;
+      --type-book: #d4a574; --type-article: #7ab0d4; --type-whitepaper: #a87bd4;
+      --type-podcast: #6dab6d; --type-person: #d47a8a; --type-conversation: #d4c57a; --type-other: #8a8a8a;
+      --ai-accent: #a87bd4; --sync-accent: #4a9eff;
     }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg-primary);
-      color: var(--text-primary);
-      min-height: 100vh; min-height: 100dvh;
-      overflow-x: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; min-height: 100dvh; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
     @keyframes ripple { 0% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    .fade-in { animation: fadeIn 0.3s ease-out; }
-    .slide-up { animation: slideUp 0.4s ease-out; }
-
+    @keyframes aiGlow { 0%,100% { box-shadow: 0 0 4px rgba(168,123,212,0.3); } 50% { box-shadow: 0 0 12px rgba(168,123,212,0.6); } }
+    .fade-in { animation: fadeIn 0.3s ease-out; } .slide-up { animation: slideUp 0.4s ease-out; }
     #root { min-height: 100vh; min-height: 100dvh; }
-
-    .app-container {
-      max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh;
-      display: flex; flex-direction: column; position: relative;
-    }
+    .app-container { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; position: relative; }
     .app-content { flex: 1; padding: 16px 16px 90px 16px; overflow-y: auto; }
-
-    /* Header */
     .app-header { padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
     .app-title { font-family: 'Libre Baskerville', serif; font-size: 22px; color: var(--accent); letter-spacing: 0.5px; }
     .app-subtitle { font-size: 11px; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 2px; }
-
-    /* Bottom nav - 5 items */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-      width: 100%; max-width: 480px; background: var(--bg-secondary);
-      border-top: 1px solid var(--border); display: flex; padding: 6px 0;
-      padding-bottom: max(6px, env(safe-area-inset-bottom)); z-index: 100;
-    }
-    .nav-item {
-      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
-      padding: 4px 0; cursor: pointer; border: none; background: none;
-      color: var(--text-muted); font-size: 9px; font-family: 'Inter', sans-serif;
-      letter-spacing: 0.3px; transition: color 0.2s;
-    }
-    .nav-item.active { color: var(--accent); }
-    .nav-item svg { width: 20px; height: 20px; }
-
-    /* Cards */
-    .card {
-      background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 12px; padding: 16px; margin-bottom: 12px; transition: border-color 0.2s;
-    }
-    .card:hover { border-color: var(--accent-glow); }
-    .card-clickable { cursor: pointer; }
-
-    .quote-text {
-      font-family: 'Libre Baskerville', serif; font-size: 14px; line-height: 1.7;
-      color: var(--text-primary); font-style: italic; margin-bottom: 12px;
-    }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .user-avatar { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--sync-accent); object-fit: cover; cursor: pointer; }
+    .sync-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; padding: 2px 6px; border-radius: 4px; background: rgba(74,158,255,0.15); color: var(--sync-accent); letter-spacing: 0.3px; }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--bg-secondary); border-top: 1px solid var(--border); display: flex; padding: 6px 0; padding-bottom: max(6px, env(safe-area-inset-bottom)); z-index: 100; }
+    .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; cursor: pointer; border: none; background: none; color: var(--text-muted); font-size: 9px; font-family: 'Inter', sans-serif; letter-spacing: 0.3px; transition: color 0.2s; }
+    .nav-item.active { color: var(--accent); } .nav-item svg { width: 20px; height: 20px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 12px; transition: border-color 0.2s; }
+    .card:hover { border-color: var(--accent-glow); } .card-clickable { cursor: pointer; }
+    .quote-text { font-family: 'Libre Baskerville', serif; font-size: 14px; line-height: 1.7; color: var(--text-primary); font-style: italic; margin-bottom: 12px; }
     .quote-text::before { content: '\201C'; color: var(--accent); font-size: 20px; margin-right: 2px; }
     .quote-text::after { content: '\201D'; color: var(--accent); font-size: 20px; margin-left: 2px; }
-
     .quote-meta { font-size: 12px; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .quote-source { font-weight: 600; color: var(--accent); }
-    .quote-author { color: var(--text-secondary); }
-    .quote-date { color: var(--text-muted); font-size: 11px; }
-
+    .quote-source { font-weight: 600; color: var(--accent); } .quote-author { color: var(--text-secondary); } .quote-date { color: var(--text-muted); font-size: 11px; }
     .theme-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .theme-tag {
-      background: var(--accent-dim); color: var(--accent); font-size: 11px;
-      padding: 3px 10px; border-radius: 20px; font-weight: 500; letter-spacing: 0.3px;
-      cursor: pointer; border: none; font-family: 'Inter', sans-serif; transition: background 0.2s;
-    }
+    .theme-tag { background: var(--accent-dim); color: var(--accent); font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 500; letter-spacing: 0.3px; cursor: pointer; border: none; font-family: 'Inter', sans-serif; transition: background 0.2s; }
     .theme-tag:hover { background: var(--accent-glow); }
-
-    /* Forms */
+    .theme-tag.ai-tag { background: rgba(168,123,212,0.15); color: var(--ai-accent); border: 1px solid rgba(168,123,212,0.3); }
     .form-group { margin-bottom: 16px; }
     .form-label { display: block; font-size: 11px; font-weight: 600; color: var(--text-secondary); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
-    .form-input, .form-textarea, .form-select {
-      width: 100%; background: var(--bg-input); border: 1px solid var(--border);
-      border-radius: 8px; padding: 10px 12px; color: var(--text-primary);
-      font-size: 14px; font-family: 'Inter', sans-serif; transition: border-color 0.2s; outline: none;
-    }
+    .form-input, .form-textarea, .form-select { width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text-primary); font-size: 14px; font-family: 'Inter', sans-serif; transition: border-color 0.2s; outline: none; }
     .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); }
     .form-textarea { resize: vertical; min-height: 100px; font-family: 'Libre Baskerville', serif; line-height: 1.7; }
     .form-select option { background: var(--bg-secondary); }
-
-    /* Buttons */
-    .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500;
-      font-family: 'Inter', sans-serif; cursor: pointer; border: none; transition: all 0.2s;
-    }
-    .btn-primary { background: var(--accent); color: var(--bg-primary); }
-    .btn-primary:hover { background: var(--accent-hover); }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
-    .btn-secondary:hover { border-color: var(--accent); }
-    .btn-danger { background: rgba(199,92,92,0.15); color: var(--danger); border: 1px solid rgba(199,92,92,0.3); }
-    .btn-danger:hover { background: rgba(199,92,92,0.25); }
-    .btn-full { width: 100%; }
-    .btn-sm { padding: 6px 12px; font-size: 12px; }
-
-    /* Voice / Camera */
-    .voice-btn {
-      width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--accent);
-      background: var(--accent-dim); color: var(--accent); display: flex;
-      align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s;
-    }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; font-family: 'Inter', sans-serif; cursor: pointer; border: none; transition: all 0.2s; }
+    .btn-primary { background: var(--accent); color: var(--bg-primary); } .btn-primary:hover { background: var(--accent-hover); } .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); } .btn-secondary:hover { border-color: var(--accent); }
+    .btn-danger { background: rgba(199,92,92,0.15); color: var(--danger); border: 1px solid rgba(199,92,92,0.3); } .btn-danger:hover { background: rgba(199,92,92,0.25); }
+    .btn-ai { background: rgba(168,123,212,0.15); color: var(--ai-accent); border: 1px solid rgba(168,123,212,0.3); } .btn-ai:hover { background: rgba(168,123,212,0.25); }
+    .btn-google { background: #fff; color: #333; border: 1px solid #ddd; font-weight: 600; gap: 10px; } .btn-google:hover { background: #f5f5f5; border-color: #bbb; }
+    .btn-full { width: 100%; } .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .voice-btn { width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--accent); background: var(--accent-dim); color: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s; }
     .voice-btn:hover { background: var(--accent-glow); }
     .voice-btn.recording { background: rgba(199,92,92,0.2); border-color: var(--danger); color: var(--danger); }
-    .voice-btn.recording::after {
-      content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%;
-      border: 2px solid var(--danger); animation: ripple 1.5s infinite;
-    }
-    .camera-btn {
-      width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--graph-source);
-      background: rgba(122,176,212,0.1); color: var(--graph-source);
-      display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
-    }
+    .voice-btn.recording::after { content: ''; position: absolute; width: 100%; height: 100%; border-radius: 50%; border: 2px solid var(--danger); animation: ripple 1.5s infinite; }
+    .camera-btn { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--graph-source); background: rgba(122,176,212,0.1); color: var(--graph-source); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; }
     .camera-btn:hover { background: rgba(122,176,212,0.2); }
-
     .capture-methods { display: flex; gap: 16px; justify-content: center; align-items: center; margin: 20px 0; }
     .capture-divider { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-
-    /* Search */
     .search-bar { position: relative; margin-bottom: 16px; }
-    .search-bar input {
-      width: 100%; background: var(--bg-card); border: 1px solid var(--border);
-      border-radius: 10px; padding: 10px 12px 10px 36px; color: var(--text-primary);
-      font-size: 14px; font-family: 'Inter', sans-serif; outline: none;
-    }
+    .search-bar input { width: 100%; background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px 10px 36px; color: var(--text-primary); font-size: 14px; font-family: 'Inter', sans-serif; outline: none; }
     .search-bar input:focus { border-color: var(--accent); }
     .search-bar svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px; height: 18px; }
-
-    /* Filter pills */
     .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
-    .filter-pill {
-      padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer;
-      border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary);
-      font-family: 'Inter', sans-serif; transition: all 0.2s;
-    }
+    .filter-pill { padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); font-family: 'Inter', sans-serif; transition: all 0.2s; }
     .filter-pill.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
-
-    /* Stats */
-    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
-    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 10px; text-align: center; }
-    .stat-value { font-size: 24px; font-weight: 700; color: var(--accent); font-family: 'Libre Baskerville', serif; }
-    .stat-label { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
-
-    /* Graph */
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 16px; }
+    .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 6px; text-align: center; }
+    .stat-value { font-size: 22px; font-weight: 700; color: var(--accent); font-family: 'Libre Baskerville', serif; }
+    .stat-label { font-size: 9px; color: var(--text-muted); letter-spacing: 0.8px; text-transform: uppercase; margin-top: 3px; }
     .graph-container { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; position: relative; }
     .graph-container svg { width: 100%; display: block; }
-    .graph-legend { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 14px; font-size: 11px; color: var(--text-muted); }
-    .legend-item { display: flex; align-items: center; gap: 5px; }
-    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
-
-    /* Empty state */
+    .graph-legend { position: absolute; bottom: 8px; left: 8px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 10px; color: var(--text-muted); }
+    .legend-item { display: flex; align-items: center; gap: 4px; } .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
     .empty-state { text-align: center; padding: 50px 20px; color: var(--text-muted); }
     .empty-state svg { width: 60px; height: 60px; margin-bottom: 14px; opacity: 0.4; }
     .empty-state h3 { font-family: 'Libre Baskerville', serif; font-size: 18px; color: var(--text-secondary); margin-bottom: 8px; }
     .empty-state p { font-size: 13px; line-height: 1.6; }
-
-    /* Theme input */
-    .theme-input-container {
-      display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg-input);
-      border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: text; transition: border-color 0.2s;
-    }
+    .theme-input-container { display: flex; flex-wrap: wrap; gap: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; padding: 8px; cursor: text; transition: border-color 0.2s; }
     .theme-input-container:focus-within { border-color: var(--accent); }
     .theme-chip { display: flex; align-items: center; gap: 4px; background: var(--accent-dim); color: var(--accent); padding: 3px 8px; border-radius: 14px; font-size: 12px; }
-    .theme-chip button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
+    .theme-chip.ai-chip { background: rgba(168,123,212,0.15); color: var(--ai-accent); }
+    .theme-chip button { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; line-height: 1; padding: 0; }
     .theme-input { flex: 1; min-width: 80px; background: none; border: none; color: var(--text-primary); font-size: 13px; outline: none; font-family: 'Inter', sans-serif; }
-
     .theme-suggestions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
-    .theme-suggestion {
-      font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg-card);
-      border: 1px solid var(--border); color: var(--text-muted); cursor: pointer;
-      font-family: 'Inter', sans-serif; transition: all 0.2s;
-    }
+    .theme-suggestion { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; }
     .theme-suggestion:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* Toast */
-    .toast {
-      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-      background: var(--bg-card); border: 1px solid var(--accent); color: var(--text-primary);
-      padding: 10px 20px; border-radius: 10px; font-size: 13px; z-index: 300;
-      animation: fadeIn 0.3s ease-out; box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-    }
-
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--bg-card); border: 1px solid var(--accent); color: var(--text-primary); padding: 10px 20px; border-radius: 10px; font-size: 13px; z-index: 300; animation: fadeIn 0.3s ease-out; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+    .toast.ai-toast { border-color: var(--ai-accent); }
+    .toast.sync-toast { border-color: var(--sync-accent); }
     .section-title { font-family: 'Libre Baskerville', serif; font-size: 16px; color: var(--text-primary); margin-bottom: 12px; }
-    .detail-back {
-      display: flex; align-items: center; gap: 6px; color: var(--accent); font-size: 13px;
-      cursor: pointer; background: none; border: none; font-family: 'Inter', sans-serif; margin-bottom: 16px;
-    }
-
+    .detail-back { display: flex; align-items: center; gap: 6px; color: var(--accent); font-size: 13px; cursor: pointer; background: none; border: none; font-family: 'Inter', sans-serif; margin-bottom: 16px; }
     .ocr-loading { text-align: center; padding: 20px; color: var(--text-secondary); font-size: 13px; }
     .ocr-loading .spinner { display: inline-block; width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 8px; }
-
-    /* ─── Source Library Styles ─── */
-    .source-type-badge {
-      display: inline-flex; align-items: center; gap: 4px; font-size: 10px;
-      font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase;
-      padding: 3px 8px; border-radius: 4px;
-    }
-    .source-card {
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s;
-      display: flex; align-items: center; gap: 14px;
-    }
+    .source-type-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.8px; text-transform: uppercase; padding: 3px 8px; border-radius: 4px; }
+    .source-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 14px; }
     .source-card:hover { border-color: var(--accent-glow); transform: translateY(-1px); }
-    .source-icon {
-      width: 44px; height: 44px; border-radius: 10px; display: flex;
-      align-items: center; justify-content: center; flex-shrink: 0;
-    }
+    .source-icon { width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .source-icon svg { width: 22px; height: 22px; }
     .source-info { flex: 1; min-width: 0; }
     .source-name { font-family: 'Libre Baskerville', serif; font-size: 14px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .source-detail { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-    .source-count {
-      font-size: 20px; font-weight: 700; color: var(--accent);
-      font-family: 'Libre Baskerville', serif; text-align: right; min-width: 30px;
-    }
-
-    .source-group-header {
-      font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px;
-      text-transform: uppercase; margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
-    }
+    .source-count { font-size: 20px; font-weight: 700; color: var(--accent); font-family: 'Libre Baskerville', serif; text-align: right; min-width: 30px; }
+    .source-group-header { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
     .source-group-header:first-child { margin-top: 0; }
-
-    /* Source detail hero */
-    .source-hero {
-      background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px;
-      padding: 20px; margin-bottom: 16px; text-align: center;
-    }
-    .source-hero-icon {
-      width: 60px; height: 60px; border-radius: 14px; display: inline-flex;
-      align-items: center; justify-content: center; margin-bottom: 12px;
-    }
+    .source-hero { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; text-align: center; }
+    .source-hero-icon { width: 60px; height: 60px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; }
     .source-hero-icon svg { width: 28px; height: 28px; }
     .source-hero-name { font-family: 'Libre Baskerville', serif; font-size: 20px; color: var(--text-primary); margin-bottom: 4px; }
     .source-hero-author { font-size: 14px; color: var(--text-secondary); }
     .source-hero-stats { display: flex; justify-content: center; gap: 24px; margin-top: 14px; }
-    .source-hero-stat { text-align: center; }
-    .source-hero-stat-val { font-size: 18px; font-weight: 700; color: var(--accent); }
+    .source-hero-stat { text-align: center; } .source-hero-stat-val { font-size: 18px; font-weight: 700; color: var(--accent); }
     .source-hero-stat-lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
-
-    .source-themes-bar {
-      display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px;
-    }
-
+    .source-themes-bar { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px; }
+    /* AI suggestion cards */
+    .ai-suggestions { background: rgba(168,123,212,0.08); border: 1px solid rgba(168,123,212,0.25); border-radius: 10px; padding: 12px; margin-top: 12px; animation: fadeIn 0.4s ease-out; }
+    .ai-suggestions-header { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--ai-accent); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 8px; }
+    .ai-suggestion-tag { display: inline-flex; align-items: center; gap: 4px; background: rgba(168,123,212,0.15); color: var(--ai-accent); font-size: 12px; padding: 4px 10px; border-radius: 14px; cursor: pointer; border: 1px solid rgba(168,123,212,0.3); margin: 2px; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+    .ai-suggestion-tag:hover { background: rgba(168,123,212,0.3); }
+    .ai-suggestion-tag.accepted { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+    .ai-suggestion-tag .check { font-size: 14px; }
+    /* Connection card */
+    .connection-card { background: rgba(168,123,212,0.06); border: 1px solid rgba(168,123,212,0.2); border-radius: 10px; padding: 12px; margin-bottom: 10px; }
+    .connection-reason { font-size: 12px; color: var(--ai-accent); margin-bottom: 8px; font-style: italic; }
+    .connection-quote { font-family: 'Libre Baskerville', serif; font-size: 13px; color: var(--text-secondary); font-style: italic; cursor: pointer; }
+    .connection-quote:hover { color: var(--text-primary); }
+    .connection-source { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    /* Settings */
+    .settings-section { margin-bottom: 24px; }
+    .settings-section-title { font-size: 12px; font-weight: 600; color: var(--text-muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .api-key-input { font-family: monospace; letter-spacing: 1px; }
+    .ai-status { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+    .ai-status.connected { background: rgba(109,171,109,0.15); color: var(--success); }
+    .ai-status.disconnected { background: rgba(199,92,92,0.15); color: var(--danger); }
+    /* Progress bar for batch analysis */
+    .progress-bar { width: 100%; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+    .progress-bar-fill { height: 100%; background: var(--ai-accent); border-radius: 2px; transition: width 0.3s; }
+    /* Graph tooltip */
+    .graph-tooltip { position: absolute; background: var(--bg-secondary); border: 1px solid var(--ai-accent); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--text-primary); pointer-events: none; z-index: 10; max-width: 220px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+    /* Cloud sync UI */
+    .user-bar { display: flex; align-items: center; gap: 10px; background: rgba(74,158,255,0.08); border: 1px solid rgba(74,158,255,0.25); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; }
+    .user-bar-info { flex: 1; min-width: 0; }
+    .user-bar-name { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-bar-email { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .setup-step { background: var(--bg-input); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+    .setup-step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--sync-accent); color: #fff; font-size: 11px; font-weight: 700; margin-right: 8px; }
+    .setup-step p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-top: 6px; }
+    .migration-card { background: rgba(74,158,255,0.08); border: 1px solid rgba(74,158,255,0.25); border-radius: 10px; padding: 16px; margin-bottom: 16px; animation: fadeIn 0.4s ease-out; }
     @media (min-width: 481px) { .app-container { border-left: 1px solid var(--border); border-right: 1px solid var(--border); } }
   </style>
 </head>
@@ -306,12 +181,9 @@
 <div id="root"></div>
 
 <script>
-// Register service worker for offline support
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      console.log('SW registered:', reg.scope);
-    }).catch(err => console.log('SW registration failed:', err));
+    navigator.serviceWorker.register('./sw.js').then(r => console.log('SW:', r.scope)).catch(e => console.log('SW fail:', e));
   });
 }
 </script>
@@ -320,12 +192,13 @@ if ('serviceWorker' in navigator) {
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 // ─── Icons ──────────────────────────────────────────────────
-const Icons = {
+const I = {
   home: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
   plus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
   search: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   graph: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><line x1="8.5" y1="7.5" x2="15.5" y2="16.5" opacity="0.4"/><line x1="15.5" y1="7.5" x2="8.5" y2="16.5" opacity="0.4"/><line x1="6" y1="9" x2="6" y2="15" opacity="0.4"/><line x1="18" y1="9" x2="18" y2="15" opacity="0.4"/></svg>,
   library: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/><line x1="9" y1="7" x2="16" y2="7"/><line x1="9" y1="11" x2="14" y2="11"/></svg>,
+  settings: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>,
   mic: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="1" width="6" height="12" rx="3"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>,
   camera: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>,
   book: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>,
@@ -335,94 +208,182 @@ const Icons = {
   podcast: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12 1a7 7 0 00-7 7v4a7 7 0 0014 0V8a7 7 0 00-7-7z" opacity="0.3"/><rect x="9" y="14" width="6" height="8" rx="2"/><path d="M18 8a6 6 0 00-12 0"/><path d="M15 8a3 3 0 00-6 0"/></svg>,
   conversation: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>,
   chevronLeft: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><polyline points="15 18 9 12 15 6"/></svg>,
-  x: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   trash: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="16" height="16"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
   edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="16" height="16"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
   stop: <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>,
+  ai: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="16" height="16"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  cloud: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="16" height="16"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>,
+  logout: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" width="16" height="16"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
   other: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
 };
 
-const SOURCE_TYPE_CONFIG = {
-  book:         { icon: Icons.book,         color: 'var(--type-book)',         label: 'Books' },
-  article:      { icon: Icons.article,      color: 'var(--type-article)',      label: 'Articles' },
-  whitepaper:   { icon: Icons.whitepaper,   color: 'var(--type-whitepaper)',   label: 'Whitepapers' },
-  podcast:      { icon: Icons.podcast,      color: 'var(--type-podcast)',      label: 'Podcasts' },
-  person:       { icon: Icons.person,       color: 'var(--type-person)',       label: 'People' },
-  conversation: { icon: Icons.conversation, color: 'var(--type-conversation)', label: 'Conversations' },
-  other:        { icon: Icons.other,        color: 'var(--type-other)',        label: 'Other' },
+const SRC_CFG = {
+  book: { icon: I.book, color: 'var(--type-book)', label: 'Books' },
+  article: { icon: I.article, color: 'var(--type-article)', label: 'Articles' },
+  whitepaper: { icon: I.whitepaper, color: 'var(--type-whitepaper)', label: 'Whitepapers' },
+  podcast: { icon: I.podcast, color: 'var(--type-podcast)', label: 'Podcasts' },
+  person: { icon: I.person, color: 'var(--type-person)', label: 'People' },
+  conversation: { icon: I.conversation, color: 'var(--type-conversation)', label: 'Conversations' },
+  other: { icon: I.other, color: 'var(--type-other)', label: 'Other' },
 };
 
-// ─── IndexedDB ──────────────────────────────────────────────
-const DB_NAME = 'commonplace_db';
-const DB_VERSION = 2;
-
+// ═══════════════════════════════════════════════════════════
+// ─── INDEXED DB (v3) ──────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+const DB_NAME = 'commonplace_db', DB_VER = 3;
 function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = (e) => {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = (e) => {
       const db = e.target.result;
-      if (!db.objectStoreNames.contains('quotes')) {
-        const qs = db.createObjectStore('quotes', { keyPath: 'id' });
-        qs.createIndex('sourceId', 'sourceId', { unique: false });
-        qs.createIndex('createdAt', 'createdAt', { unique: false });
-      }
-      if (!db.objectStoreNames.contains('sources')) {
-        const ss = db.createObjectStore('sources', { keyPath: 'id' });
-        ss.createIndex('type', 'type', { unique: false });
-        ss.createIndex('name', 'name', { unique: false });
-      }
-      // Migrate v1 quotes store if needed
-      if (e.oldVersion < 2 && db.objectStoreNames.contains('quotes')) {
-        try {
-          const tx = e.target.transaction;
-          const store = tx.objectStore('quotes');
-          if (!store.indexNames.contains('sourceId')) {
-            store.createIndex('sourceId', 'sourceId', { unique: false });
-          }
-        } catch(err) { /* ok */ }
-      }
+      if (!db.objectStoreNames.contains('quotes')) { const s = db.createObjectStore('quotes', { keyPath: 'id' }); s.createIndex('sourceId', 'sourceId', { unique: false }); }
+      if (!db.objectStoreNames.contains('sources')) { db.createObjectStore('sources', { keyPath: 'id' }); }
+      if (!db.objectStoreNames.contains('connections')) { const c = db.createObjectStore('connections', { keyPath: 'id' }); c.createIndex('quoteA', 'quoteA', { unique: false }); c.createIndex('quoteB', 'quoteB', { unique: false }); }
+      if (!db.objectStoreNames.contains('settings')) { db.createObjectStore('settings', { keyPath: 'key' }); }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
   });
 }
-
-async function dbGetAll(storeName) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readonly');
-    const req = tx.objectStore(storeName).getAll();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function dbPut(storeName, item) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite');
-    tx.objectStore(storeName).put(item);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function dbDelete(storeName, id) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(storeName, 'readwrite');
-    tx.objectStore(storeName).delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
+async function dbAll(store) { const db = await openDB(); return new Promise((res, rej) => { const r = db.transaction(store, 'readonly').objectStore(store).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+async function dbPut(store, item) { const db = await openDB(); return new Promise((res, rej) => { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).put(item); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+async function dbDel(store, id) { const db = await openDB(); return new Promise((res, rej) => { const tx = db.transaction(store, 'readwrite'); tx.objectStore(store).delete(id); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+async function dbGet(store, key) { const db = await openDB(); return new Promise((res, rej) => { const r = db.transaction(store, 'readonly').objectStore(store).get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 9); }
 
+// ═══════════════════════════════════════════════════════════
+// ─── FIREBASE / CLOUD SYNC LAYER ─────────────────────────
+// ═══════════════════════════════════════════════════════════
+let firebaseApp = null;
+let firebaseAuth = null;
+let firebaseDb = null;
+
+function initFirebase(config) {
+  try {
+    if (firebaseApp) { firebaseApp.delete().catch(()=>{}); }
+    firebaseApp = firebase.initializeApp(config);
+    firebaseAuth = firebase.auth();
+    firebaseDb = firebase.firestore();
+    console.log('Firebase initialized');
+    return true;
+  } catch (err) {
+    console.error('Firebase init error:', err);
+    return false;
+  }
+}
+
+// Firestore helpers — data stored under users/{uid}/{collection}/{docId}
+function fsCol(uid, collection) { return firebaseDb.collection('users').doc(uid).collection(collection); }
+async function fsAll(uid, collection) { const snap = await fsCol(uid, collection).get(); return snap.docs.map(d => ({ ...d.data(), id: d.id })); }
+async function fsPut(uid, collection, item) { await fsCol(uid, collection).doc(item.id).set(item); }
+async function fsDel(uid, collection, id) { await fsCol(uid, collection).doc(id).delete(); }
+
+// Unified data layer — returns same interface whether local or cloud
+function createDataLayer(uid) {
+  if (uid && firebaseDb) {
+    return {
+      all: (col) => fsAll(uid, col),
+      put: (col, item) => fsPut(uid, col, item),
+      del: (col, id) => fsDel(uid, col, id),
+      get: async (col, key) => { const doc = await fsCol(uid, col).doc(key).get(); return doc.exists ? { ...doc.data(), key } : undefined; },
+      getSetting: async (key) => { const doc = await fsCol(uid, 'settings').doc(key).get(); return doc.exists ? doc.data() : undefined; },
+      putSetting: (key, value) => fsCol(uid, 'settings').doc(key).set({ key, value }),
+      isCloud: true,
+    };
+  }
+  return {
+    all: dbAll,
+    put: dbPut,
+    del: dbDel,
+    get: dbGet,
+    getSetting: (key) => dbGet('settings', key),
+    putSetting: (key, value) => dbPut('settings', { key, value }),
+    isCloud: false,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════
+// ─── AI SERVICE ───────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+async function callClaude(apiKey, prompt, model = 'claude-haiku-4-5-20251001') {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({ model, max_tokens: 1024, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!resp.ok) { const err = await resp.text(); throw new Error(`API error ${resp.status}: ${err}`); }
+  const data = await resp.json();
+  return data.content[0].text;
+}
+
+function parseJSON(text) {
+  try {
+    const match = text.match(/\[[\s\S]*\]/);
+    return match ? JSON.parse(match[0]) : [];
+  } catch { return []; }
+}
+
+async function aiExtractThemes(apiKey, quoteText, source, author) {
+  const prompt = `Analyze this quote and extract 2-5 underlying themes. Focus on deep philosophical, emotional, or intellectual themes rather than surface-level topics. Be concise — each theme should be 1-2 words.
+
+Quote: "${quoteText}"
+${source ? `Source: ${source}` : ''}${author ? ` by ${author}` : ''}
+
+Return ONLY a JSON array of lowercase theme strings. Example: ["resilience", "mortality", "inner peace"]`;
+  const result = await callClaude(apiKey, prompt);
+  return parseJSON(result).filter(t => typeof t === 'string').map(t => t.toLowerCase().trim());
+}
+
+async function aiDiscoverConnections(apiKey, newQuote, existingQuotes) {
+  if (existingQuotes.length === 0) return [];
+  const candidates = existingQuotes.slice(0, 30);
+  const quotesText = candidates.map(q => `[${q.id}] "${q.text.slice(0, 120)}" (${q.source || 'unknown source'})`).join('\n');
+
+  const prompt = `Given this new quote, identify which existing quotes share a deep thematic connection. Look for shared underlying ideas, complementary perspectives, or meaningful contrasts — not just surface-level topic overlap. Be selective: only flag truly meaningful connections.
+
+New quote: "${newQuote.text.slice(0, 200)}" (from ${newQuote.source || 'unknown'})
+
+Existing quotes:
+${quotesText}
+
+Return ONLY a JSON array of objects: [{"id": "quote_id", "reason": "brief 5-10 word explanation"}]
+Return an empty array [] if no deep connections exist. Maximum 4 connections.`;
+
+  const result = await callClaude(apiKey, prompt);
+  return parseJSON(result).filter(c => c.id && c.reason && candidates.some(q => q.id === c.id));
+}
+
+async function aiBatchAnalyze(apiKey, quotes, onProgress) {
+  const results = { themes: {}, connections: [] };
+  for (let i = 0; i < quotes.length; i++) {
+    const q = quotes[i];
+    try {
+      if (!q.aiThemes || q.aiThemes.length === 0) {
+        const themes = await aiExtractThemes(apiKey, q.text, q.source, q.author);
+        results.themes[q.id] = themes;
+      }
+      if (i > 0) {
+        const priors = quotes.slice(0, i);
+        const connections = await aiDiscoverConnections(apiKey, q, priors);
+        connections.forEach(c => {
+          results.connections.push({ id: genId(), quoteA: q.id, quoteB: c.id, reason: c.reason, createdAt: new Date().toISOString() });
+        });
+      }
+    } catch (err) { console.error('AI batch error for quote', q.id, err); }
+    if (onProgress) onProgress(i + 1, quotes.length);
+  }
+  return results;
+}
+
 // ─── Small Components ───────────────────────────────────────
-function Toast({ message, onDone }) {
-  useEffect(() => { const t = setTimeout(onDone, 2500); return () => clearTimeout(t); }, [onDone]);
-  return <div className="toast">{message}</div>;
+function Toast({ message, type, onDone }) {
+  useEffect(() => { const t = setTimeout(onDone, 3000); return () => clearTimeout(t); }, [onDone]);
+  return <div className={`toast ${type === 'ai' ? 'ai-toast' : type === 'sync' ? 'sync-toast' : ''}`}>{message}</div>;
 }
 
 function ThemeInput({ themes, onChange, allThemes }) {
@@ -432,17 +393,15 @@ function ThemeInput({ themes, onChange, allThemes }) {
     if (!input.trim()) return allThemes.filter(t => !themes.includes(t)).slice(0, 8);
     return allThemes.filter(t => t.toLowerCase().includes(input.toLowerCase()) && !themes.includes(t)).slice(0, 6);
   }, [input, allThemes, themes]);
-  const addTheme = (theme) => { const t = theme.trim().toLowerCase(); if (t && !themes.includes(t)) onChange([...themes, t]); setInput(''); inputRef.current?.focus(); };
-  const removeTheme = (theme) => onChange(themes.filter(t => t !== theme));
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTheme(input); }
-    else if (e.key === 'Backspace' && !input && themes.length) removeTheme(themes[themes.length - 1]);
-  };
+  const addTheme = (t) => { const v = t.trim().toLowerCase(); if (v && !themes.includes(v)) onChange([...themes, v]); setInput(''); inputRef.current?.focus(); };
+  const removeTheme = (t) => onChange(themes.filter(x => x !== t));
   return (
     <div>
       <div className="theme-input-container" onClick={() => inputRef.current?.focus()}>
         {themes.map(t => <span className="theme-chip" key={t}>{t}<button onClick={e => { e.stopPropagation(); removeTheme(t); }}>&times;</button></span>)}
-        <input ref={inputRef} className="theme-input" value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={themes.length ? '' : 'Type theme and press Enter...'} />
+        <input ref={inputRef} className="theme-input" value={input} onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTheme(input); } else if (e.key === 'Backspace' && !input && themes.length) removeTheme(themes[themes.length - 1]); }}
+          placeholder={themes.length ? '' : 'Type theme and press Enter...'} />
       </div>
       {suggestions.length > 0 && <div className="theme-suggestions">{suggestions.map(s => <button key={s} className="theme-suggestion" onClick={() => addTheme(s)}>{s}</button>)}</div>}
     </div>
@@ -450,16 +409,14 @@ function ThemeInput({ themes, onChange, allThemes }) {
 }
 
 function SourceTypeBadge({ type }) {
-  const cfg = SOURCE_TYPE_CONFIG[type] || SOURCE_TYPE_CONFIG.other;
-  return (
-    <span className="source-type-badge" style={{ background: cfg.color + '22', color: cfg.color }}>
-      {type}
-    </span>
-  );
+  const cfg = SRC_CFG[type] || SRC_CFG.other;
+  return <span className="source-type-badge" style={{ background: cfg.color + '22', color: cfg.color }}>{type}</span>;
 }
 
-// ─── Knowledge Graph ────────────────────────────────────────
-function KnowledgeGraph({ quotes, onNodeClick }) {
+// ═══════════════════════════════════════════════════════════
+// ─── OBSIDIAN-STYLE KNOWLEDGE GRAPH ──────────────────────
+// ═══════════════════════════════════════════════════════════
+function KnowledgeGraph({ quotes, connections, onQuoteClick, onThemeClick, onSourceClick }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const simRef = useRef(null);
@@ -467,70 +424,155 @@ function KnowledgeGraph({ quotes, onNodeClick }) {
   useEffect(() => {
     if (!svgRef.current || quotes.length === 0) return;
     const width = containerRef.current.clientWidth;
-    const height = 380;
-
-    const themeSet = new Set();
-    const sourceSet = new Set();
-    quotes.forEach(q => { if (q.source) sourceSet.add(q.source); q.themes.forEach(t => themeSet.add(t)); });
+    const height = 420;
 
     const nodes = []; const nodeMap = {};
-    themeSet.forEach(t => { const n = { id: `theme:${t}`, label: t, type: 'theme', count: 0 }; nodes.push(n); nodeMap[n.id] = n; });
-    sourceSet.forEach(s => { const n = { id: `source:${s}`, label: s, type: 'source', count: 0 }; nodes.push(n); nodeMap[n.id] = n; });
+    const themeSet = new Set(); const sourceSet = new Set();
 
-    const linkMap = {};
     quotes.forEach(q => {
-      if (!q.source) return;
-      const srcId = `source:${q.source}`;
-      if (nodeMap[srcId]) nodeMap[srcId].count++;
-      q.themes.forEach(t => {
-        const thId = `theme:${t}`;
-        if (nodeMap[thId]) nodeMap[thId].count++;
-        const key = `${srcId}|${thId}`;
-        if (!linkMap[key]) linkMap[key] = { source: srcId, target: thId, weight: 0 };
-        linkMap[key].weight++;
-      });
+      const n = { id: q.id, label: q.text.slice(0, 40) + (q.text.length > 40 ? '...' : ''), type: 'quote', data: q, count: 1 };
+      nodes.push(n); nodeMap[q.id] = n;
+      if (q.source) sourceSet.add(q.source);
+      (q.themes || []).forEach(t => themeSet.add(t));
+      (q.aiThemes || []).forEach(t => themeSet.add(t));
     });
-    const links = Object.values(linkMap);
-    if (nodes.length === 0) return;
 
-    const svg = d3.select(svgRef.current); svg.selectAll('*').remove(); svg.attr('width', width).attr('height', height);
+    themeSet.forEach(t => { const n = { id: `t:${t}`, label: t, type: 'theme', count: 0 }; nodes.push(n); nodeMap[n.id] = n; });
+    sourceSet.forEach(s => { const n = { id: `s:${s}`, label: s, type: 'source', count: 0 }; nodes.push(n); nodeMap[n.id] = n; });
+
+    const links = [];
+    quotes.forEach(q => {
+      const allT = [...new Set([...(q.themes || []), ...(q.aiThemes || [])])];
+      allT.forEach(t => {
+        const thId = `t:${t}`;
+        if (nodeMap[thId]) { nodeMap[thId].count++; links.push({ source: q.id, target: thId, type: 'theme' }); }
+      });
+      if (q.source && nodeMap[`s:${q.source}`]) {
+        nodeMap[`s:${q.source}`].count++;
+        links.push({ source: q.id, target: `s:${q.source}`, type: 'source' });
+      }
+    });
+
+    connections.forEach(c => {
+      if (nodeMap[c.quoteA] && nodeMap[c.quoteB]) {
+        links.push({ source: c.quoteA, target: c.quoteB, type: 'connection', reason: c.reason });
+      }
+    });
+
+    const svg = d3.select(svgRef.current); svg.selectAll('*').remove();
+    svg.attr('width', width).attr('height', height);
+
+    const defs = svg.append('defs');
+    const glow = defs.append('filter').attr('id', 'glow');
+    glow.append('feGaussianBlur').attr('stdDeviation', '3').attr('result', 'coloredBlur');
+    const merge = glow.append('feMerge');
+    merge.append('feMergeNode').attr('in', 'coloredBlur');
+    merge.append('feMergeNode').attr('in', 'SourceGraphic');
+
     const g = svg.append('g');
-    svg.call(d3.zoom().scaleExtent([0.3, 3]).on('zoom', (e) => g.attr('transform', e.transform)));
+    svg.call(d3.zoom().scaleExtent([0.2, 4]).on('zoom', (e) => g.attr('transform', e.transform)));
 
     if (simRef.current) simRef.current.stop();
     const sim = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(links).id(d => d.id).distance(80))
-      .force('charge', d3.forceManyBody().strength(-200))
+      .force('link', d3.forceLink(links).id(d => d.id).distance(d => {
+        if (d.type === 'connection') return 60;
+        if (d.type === 'source') return 70;
+        return 55;
+      }))
+      .force('charge', d3.forceManyBody().strength(d => d.type === 'quote' ? -80 : -150))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(30));
+      .force('collision', d3.forceCollide().radius(d => d.type === 'quote' ? 12 : 20));
     simRef.current = sim;
 
-    const link = g.append('g').selectAll('line').data(links).join('line').attr('stroke', 'var(--graph-link)').attr('stroke-width', d => Math.min(d.weight * 1.5, 5));
-    const node = g.append('g').selectAll('g').data(nodes).join('g').style('cursor', 'pointer')
-      .call(d3.drag().on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; }).on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; }).on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+    const link = g.append('g').selectAll('line').data(links).join('line')
+      .attr('stroke', d => d.type === 'connection' ? 'var(--graph-connection)' : d.type === 'source' ? 'rgba(122,176,212,0.15)' : 'rgba(212,165,116,0.15)')
+      .attr('stroke-width', d => d.type === 'connection' ? 1.5 : 0.8)
+      .attr('stroke-dasharray', d => d.type === 'connection' ? '4,3' : 'none')
+      .attr('opacity', 0.6);
 
-    node.append('circle').attr('r', d => Math.max(8, Math.min(d.count * 4 + 6, 24)))
-      .attr('fill', d => d.type === 'theme' ? 'var(--graph-theme)' : 'var(--graph-source)').attr('fill-opacity', 0.2)
-      .attr('stroke', d => d.type === 'theme' ? 'var(--graph-theme)' : 'var(--graph-source)').attr('stroke-width', 1.5);
-    node.append('text').text(d => d.label.length > 14 ? d.label.slice(0, 12) + '...' : d.label)
-      .attr('text-anchor', 'middle').attr('dy', d => Math.max(8, Math.min(d.count * 4 + 6, 24)) + 14)
-      .attr('fill', 'var(--text-secondary)').attr('font-size', '10px').attr('font-family', 'Inter, sans-serif');
-    node.on('click', (e, d) => { if (onNodeClick) onNodeClick(d); });
+    const node = g.append('g').selectAll('g').data(nodes).join('g').style('cursor', 'pointer')
+      .call(d3.drag()
+        .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+        .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+        .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+    node.append('circle')
+      .attr('r', d => {
+        if (d.type === 'quote') return 6;
+        return Math.max(10, Math.min(d.count * 3 + 8, 22));
+      })
+      .attr('fill', d => {
+        if (d.type === 'theme') return 'var(--graph-theme)';
+        if (d.type === 'source') return 'var(--graph-source)';
+        return 'var(--graph-quote)';
+      })
+      .attr('fill-opacity', d => d.type === 'quote' ? 0.5 : 0.2)
+      .attr('stroke', d => {
+        if (d.type === 'theme') return 'var(--graph-theme)';
+        if (d.type === 'source') return 'var(--graph-source)';
+        return 'var(--graph-quote)';
+      })
+      .attr('stroke-width', d => d.type === 'quote' ? 1 : 1.5);
+
+    node.filter(d => d.type !== 'quote').append('text')
+      .text(d => d.label.length > 16 ? d.label.slice(0, 14) + '...' : d.label)
+      .attr('text-anchor', 'middle')
+      .attr('dy', d => Math.max(10, Math.min(d.count * 3 + 8, 22)) + 13)
+      .attr('fill', d => d.type === 'theme' ? 'var(--graph-theme)' : 'var(--graph-source)')
+      .attr('font-size', '10px').attr('font-family', 'Inter, sans-serif').attr('font-weight', '500');
+
+    const tooltip = d3.select(containerRef.current).append('div').attr('class', 'graph-tooltip').style('display', 'none');
+
+    node.on('mouseover', (event, d) => {
+      const connected = new Set([d.id]);
+      links.forEach(l => {
+        const sId = typeof l.source === 'object' ? l.source.id : l.source;
+        const tId = typeof l.target === 'object' ? l.target.id : l.target;
+        if (sId === d.id) connected.add(tId);
+        if (tId === d.id) connected.add(sId);
+      });
+      node.attr('opacity', n => connected.has(n.id) ? 1 : 0.12);
+      link.attr('opacity', l => {
+        const sId = typeof l.source === 'object' ? l.source.id : l.source;
+        const tId = typeof l.target === 'object' ? l.target.id : l.target;
+        return (sId === d.id || tId === d.id) ? 0.8 : 0.03;
+      });
+
+      let tip = '';
+      if (d.type === 'quote') tip = `<em>"${d.data.text.slice(0, 80)}..."</em><br><span style="color:var(--accent)">${d.data.source || ''}</span>`;
+      else if (d.type === 'theme') tip = `<strong>${d.label}</strong><br>${d.count} quote${d.count !== 1 ? 's' : ''}`;
+      else tip = `<strong>${d.label}</strong><br>${d.count} quote${d.count !== 1 ? 's' : ''}`;
+
+      tooltip.html(tip).style('display', 'block')
+        .style('left', (event.offsetX + 15) + 'px').style('top', (event.offsetY - 10) + 'px');
+    })
+    .on('mouseout', () => {
+      node.attr('opacity', 1); link.attr('opacity', 0.6);
+      tooltip.style('display', 'none');
+    })
+    .on('click', (event, d) => {
+      if (d.type === 'quote' && onQuoteClick) onQuoteClick(d.data);
+      else if (d.type === 'theme' && onThemeClick) onThemeClick(d.label);
+      else if (d.type === 'source' && onSourceClick) onSourceClick(d.label);
+    });
 
     sim.on('tick', () => {
       link.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
       node.attr('transform', d => `translate(${d.x},${d.y})`);
     });
-    return () => sim.stop();
-  }, [quotes, onNodeClick]);
 
-  if (quotes.length === 0) return <div className="empty-state">{Icons.graph}<h3>Your Knowledge Map</h3><p>Add quotes with themes to see how ideas connect.</p></div>;
+    return () => { sim.stop(); tooltip.remove(); };
+  }, [quotes, connections]);
+
+  if (quotes.length === 0) return <div className="empty-state">{I.graph}<h3>Your Knowledge Map</h3><p>Add quotes to see ideas connect.</p></div>;
   return (
-    <div className="graph-container" ref={containerRef}>
+    <div className="graph-container" ref={containerRef} style={{ position: 'relative' }}>
       <svg ref={svgRef} />
       <div className="graph-legend">
+        <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--graph-quote)' }} /><span>Quote</span></div>
         <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--graph-theme)' }} /><span>Theme</span></div>
         <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--graph-source)' }} /><span>Source</span></div>
+        <div className="legend-item"><div className="legend-dot" style={{ background: 'var(--graph-connection)' }} /><span>AI Link</span></div>
       </div>
     </div>
   );
@@ -542,126 +584,257 @@ function KnowledgeGraph({ quotes, onNodeClick }) {
 function App() {
   const [quotes, setQuotes] = useState([]);
   const [sources, setSources] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [apiKey, setApiKey] = useState('');
   const [view, setView] = useState('home');
   const [toast, setToast] = useState(null);
+  const [toastType, setToastType] = useState('');
   const [selectedQuote, setSelectedQuote] = useState(null);
   const [editingQuote, setEditingQuote] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
   const [browseFilter, setBrowseFilter] = useState(null);
+  // Cloud sync state
+  const [user, setUser] = useState(null);
+  const [firebaseConfig, setFirebaseConfig] = useState(null);
+  const [firebaseReady, setFirebaseReady] = useState(false);
+  const [migrationOffer, setMigrationOffer] = useState(false);
+  const [migrating, setMigrating] = useState(false);
+  const dataLayerRef = useRef(createDataLayer(null));
 
-  // Load data
+  // Initialize Firebase config from IndexedDB on load
   useEffect(() => {
-    Promise.all([dbGetAll('quotes'), dbGetAll('sources')]).then(([q, s]) => {
-      setQuotes(q); setSources(s);
-      // Auto-create source entities from legacy quotes that have source text but no sourceId
-      const existingNames = new Set(s.map(src => src.name.toLowerCase()));
-      const newSources = [];
-      q.forEach(quote => {
-        if (quote.source && !quote.sourceId) {
-          const key = quote.source.toLowerCase();
-          if (!existingNames.has(key)) {
-            existingNames.add(key);
-            const ns = { id: genId(), name: quote.source, type: quote.sourceType || 'book', author: quote.author || '', notes: '', createdAt: quote.createdAt };
-            newSources.push(ns);
+    dbGet('settings', 'firebaseConfig').then(cfgObj => {
+      if (cfgObj?.value) {
+        try {
+          const cfg = typeof cfgObj.value === 'string' ? JSON.parse(cfgObj.value) : cfgObj.value;
+          setFirebaseConfig(cfg);
+          const ok = initFirebase(cfg);
+          if (ok) {
+            setFirebaseReady(true);
+            // Listen for auth changes
+            firebaseAuth.onAuthStateChanged(u => {
+              setUser(u);
+              if (u) {
+                dataLayerRef.current = createDataLayer(u.uid);
+              } else {
+                dataLayerRef.current = createDataLayer(null);
+              }
+            });
           }
-        }
-      });
-      if (newSources.length > 0) {
-        Promise.all(newSources.map(ns => dbPut('sources', ns))).then(() => dbGetAll('sources').then(setSources));
+        } catch (e) { console.error('Bad firebase config:', e); }
       }
     }).catch(console.error);
   }, []);
 
-  const showToast = (msg) => setToast(msg);
+  // Load data whenever user changes (switch between local/cloud)
+  useEffect(() => {
+    loadAllData();
+  }, [user]);
 
-  const refreshData = async () => {
-    const [q, s] = await Promise.all([dbGetAll('quotes'), dbGetAll('sources')]);
-    setQuotes(q); setSources(s);
+  const loadAllData = async () => {
+    try {
+      const dl = dataLayerRef.current;
+      const [q, s, c] = await Promise.all([dl.all('quotes'), dl.all('sources'), dl.all('connections')]);
+      setQuotes(q); setSources(s); setConnections(c);
+      // Load API key
+      const keyObj = await dl.getSetting('apiKey');
+      if (keyObj?.value) setApiKey(keyObj.value);
+      // Auto-create sources from legacy quotes
+      const existing = new Set(s.map(x => x.name.toLowerCase()));
+      const newSrcs = [];
+      q.forEach(quote => {
+        if (quote.source && !quote.sourceId) {
+          const key = quote.source.toLowerCase();
+          if (!existing.has(key)) { existing.add(key); newSrcs.push({ id: genId(), name: quote.source, type: quote.sourceType || 'book', author: quote.author || '', notes: '', createdAt: quote.createdAt }); }
+        }
+      });
+      if (newSrcs.length) {
+        await Promise.all(newSrcs.map(ns => dl.put('sources', ns)));
+        const s2 = await dl.all('sources');
+        setSources(s2);
+      }
+    } catch (err) { console.error('Load error:', err); }
+  };
+
+  const showToast = (msg, type) => { setToast(msg); setToastType(type || ''); };
+  const refresh = async () => {
+    const dl = dataLayerRef.current;
+    const [q, s, c] = await Promise.all([dl.all('quotes'), dl.all('sources'), dl.all('connections')]);
+    setQuotes(q); setSources(s); setConnections(c);
+  };
+
+  // Auth handlers
+  const handleGoogleLogin = async () => {
+    if (!firebaseReady || !firebaseAuth) { showToast('Set up Firebase config first'); return; }
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      const result = await firebaseAuth.signInWithPopup(provider);
+      showToast(`Welcome, ${result.user.displayName}!`, 'sync');
+      // Check if cloud is empty — offer migration
+      const cloudQuotes = await fsAll(result.user.uid, 'quotes');
+      const localQuotes = await dbAll('quotes');
+      if (cloudQuotes.length === 0 && localQuotes.length > 0) {
+        setMigrationOffer(true);
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      if (err.code === 'auth/popup-blocked') showToast('Pop-up blocked — allow pop-ups for this site');
+      else if (err.code === 'auth/cancelled-popup-request' || err.code === 'auth/popup-closed-by-user') { /* user cancelled */ }
+      else showToast('Sign-in failed: ' + err.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (firebaseAuth) await firebaseAuth.signOut();
+    dataLayerRef.current = createDataLayer(null);
+    setUser(null);
+    showToast('Signed out — using local storage');
+    await loadAllData();
+  };
+
+  const handleMigrate = async () => {
+    if (!user) return;
+    setMigrating(true);
+    try {
+      const [localQ, localS, localC] = await Promise.all([dbAll('quotes'), dbAll('sources'), dbAll('connections')]);
+      const localKey = await dbGet('settings', 'apiKey');
+      let count = 0;
+      for (const q of localQ) { await fsPut(user.uid, 'quotes', q); count++; }
+      for (const s of localS) { await fsPut(user.uid, 'sources', s); }
+      for (const c of localC) { await fsPut(user.uid, 'connections', c); }
+      if (localKey?.value) await fsPut(user.uid, 'settings', { id: 'apiKey', key: 'apiKey', value: localKey.value });
+      showToast(`Migrated ${count} quotes to cloud!`, 'sync');
+      setMigrationOffer(false);
+      await refresh();
+    } catch (err) { console.error('Migration error:', err); showToast('Migration failed: ' + err.message); }
+    finally { setMigrating(false); }
+  };
+
+  const handleSaveFirebaseConfig = async (configJson) => {
+    try {
+      const cfg = typeof configJson === 'string' ? JSON.parse(configJson) : configJson;
+      if (!cfg.apiKey || !cfg.projectId) throw new Error('Missing apiKey or projectId');
+      await dbPut('settings', { key: 'firebaseConfig', value: cfg });
+      setFirebaseConfig(cfg);
+      const ok = initFirebase(cfg);
+      if (ok) {
+        setFirebaseReady(true);
+        firebaseAuth.onAuthStateChanged(u => {
+          setUser(u);
+          if (u) dataLayerRef.current = createDataLayer(u.uid);
+          else dataLayerRef.current = createDataLayer(null);
+        });
+        showToast('Firebase configured!', 'sync');
+      } else {
+        showToast('Firebase config invalid');
+      }
+    } catch (err) { showToast('Invalid config: ' + err.message); }
   };
 
   const handleSaveQuote = async (quote) => {
-    await dbPut('quotes', quote);
-    await refreshData();
+    const dl = dataLayerRef.current;
+    await dl.put('quotes', quote);
+    await refresh();
     showToast('Quote saved');
+
+    if (apiKey && !quote.aiAnalyzed) {
+      showToast('AI is analyzing themes...', 'ai');
+      try {
+        const themes = await aiExtractThemes(apiKey, quote.text, quote.source, quote.author);
+        quote.aiThemes = themes;
+        quote.aiAnalyzed = true;
+        await dl.put('quotes', quote);
+
+        const others = quotes.filter(q => q.id !== quote.id);
+        const conns = await aiDiscoverConnections(apiKey, quote, others);
+        for (const c of conns) {
+          await dl.put('connections', { id: genId(), quoteA: quote.id, quoteB: c.id, reason: c.reason, createdAt: new Date().toISOString() });
+        }
+        await refresh();
+        showToast(`AI found ${themes.length} themes and ${conns.length} connections`, 'ai');
+      } catch (err) {
+        console.error('AI error:', err);
+        showToast('AI analysis failed — check your API key');
+      }
+    }
   };
 
-  const handleDeleteQuote = async (id) => {
-    await dbDelete('quotes', id);
-    await refreshData();
-    setSelectedQuote(null);
-    showToast('Quote deleted');
+  const handleDeleteQuote = async (id) => { await dataLayerRef.current.del('quotes', id); await refresh(); setSelectedQuote(null); showToast('Quote deleted'); };
+  const handleSaveSource = async (source) => { await dataLayerRef.current.put('sources', source); await refresh(); showToast('Source saved'); };
+  const handleDeleteSource = async (id) => { await dataLayerRef.current.del('sources', id); await refresh(); setSelectedSource(null); showToast('Source deleted'); };
+
+  const handleSaveApiKey = async (key) => {
+    setApiKey(key);
+    await dataLayerRef.current.putSetting('apiKey', key);
+    showToast(key ? 'API key saved' : 'API key removed');
   };
 
-  const handleSaveSource = async (source) => {
-    await dbPut('sources', source);
-    await refreshData();
-    showToast('Source saved');
-  };
-
-  const handleDeleteSource = async (id) => {
-    await dbDelete('sources', id);
-    await refreshData();
-    setSelectedSource(null);
-    showToast('Source deleted');
-  };
-
-  const allThemes = useMemo(() => { const s = new Set(); quotes.forEach(q => q.themes?.forEach(t => s.add(t))); return Array.from(s).sort(); }, [quotes]);
-  const allSourceNames = useMemo(() => sources.map(s => s.name).sort(), [sources]);
+  const allThemes = useMemo(() => { const s = new Set(); quotes.forEach(q => { (q.themes || []).forEach(t => s.add(t)); (q.aiThemes || []).forEach(t => s.add(t)); }); return Array.from(s).sort(); }, [quotes]);
   const allAuthors = useMemo(() => { const s = new Set(); [...quotes, ...sources].forEach(q => { if (q.author) s.add(q.author); }); return Array.from(s).sort(); }, [quotes, sources]);
 
-  const navigateToSource = useCallback((source) => { setSelectedSource(source); setView('sourceDetail'); }, []);
-  const navigateToBrowse = useCallback((filter) => { setBrowseFilter(filter); setView('browse'); }, []);
-
-  const handleGraphNodeClick = useCallback((node) => {
-    if (node.type === 'theme') navigateToBrowse({ type: 'theme', value: node.label });
-    else if (node.type === 'source') {
-      const src = sources.find(s => s.name === node.label);
-      if (src) navigateToSource(src);
-      else navigateToBrowse({ type: 'source', value: node.label });
-    }
-  }, [sources, navigateToSource, navigateToBrowse]);
+  const navTo = useCallback((v, opts) => {
+    if (opts?.quote) { setSelectedQuote(opts.quote); setView('detail'); }
+    else if (opts?.source) { setSelectedSource(opts.source); setView('sourceDetail'); }
+    else if (opts?.filter) { setBrowseFilter(opts.filter); setView('browse'); }
+    else setView(v);
+  }, []);
 
   return (
     <div className="app-container">
-      <header className="app-header"><div><div className="app-title">Commonplace</div><div className="app-subtitle">Your digital commonplace book</div></div></header>
+      <header className="app-header">
+        <div><div className="app-title">Commonplace</div><div className="app-subtitle">Your digital commonplace book</div></div>
+        <div className="header-right">
+          {apiKey && <span className="ai-status connected">{I.ai} AI</span>}
+          {user && <span className="sync-badge">{I.cloud} Synced</span>}
+          {user && user.photoURL && <img className="user-avatar" src={user.photoURL} alt="" onClick={() => setView('settings')} referrerPolicy="no-referrer" />}
+        </div>
+      </header>
+
+      {migrationOffer && (
+        <div style={{ padding: '0 16px' }}>
+          <div className="migration-card">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>{I.cloud}<strong style={{ fontSize: 13 }}>Upload local data to cloud?</strong></div>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>You have {quotes.length} quotes stored locally. Upload them to your cloud account so they sync across all your devices?</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-primary btn-sm" onClick={handleMigrate} disabled={migrating}>{migrating ? 'Uploading...' : 'Upload to Cloud'}</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => setMigrationOffer(false)}>Skip</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="app-content">
-        {view === 'home' && <HomeView quotes={quotes} sources={sources} onSelectQuote={q => { setSelectedQuote(q); setView('detail'); }} onNavigate={setView} onSelectSource={navigateToSource} />}
-        {view === 'add' && <AddQuoteView onSave={handleSaveQuote} onSaveSource={handleSaveSource} allThemes={allThemes} sources={sources} allAuthors={allAuthors} editingQuote={editingQuote} onCancelEdit={() => { setEditingQuote(null); setView('home'); }} />}
-        {view === 'library' && <LibraryView sources={sources} quotes={quotes} onSelectSource={navigateToSource} onSaveSource={handleSaveSource} />}
-        {view === 'sourceDetail' && selectedSource && <SourceDetailView source={selectedSource} quotes={quotes} allThemes={allThemes} onBack={() => setView('library')} onSelectQuote={q => { setSelectedQuote(q); setView('detail'); }} onDelete={handleDeleteSource} onEdit={handleSaveSource} />}
-        {view === 'browse' && <BrowseView quotes={quotes} allThemes={allThemes} sources={sources} onSelectQuote={q => { setSelectedQuote(q); setView('detail'); }} initialFilter={browseFilter} />}
-        {view === 'graph' && <GraphView quotes={quotes} onNodeClick={handleGraphNodeClick} />}
-        {view === 'detail' && selectedQuote && <DetailView quote={selectedQuote} onBack={() => setView('browse')} onDelete={handleDeleteQuote} onEdit={q => { setEditingQuote(q); setView('add'); }} quotes={quotes} sources={sources} onSelectQuote={q => setSelectedQuote(q)} onSelectSource={navigateToSource} />}
+        {view === 'home' && <HomeView quotes={quotes} sources={sources} connections={connections} onNav={navTo} apiKey={apiKey} />}
+        {view === 'add' && <AddQuoteView onSave={handleSaveQuote} onSaveSource={handleSaveSource} allThemes={allThemes} sources={sources} allAuthors={allAuthors} editingQuote={editingQuote} onCancelEdit={() => { setEditingQuote(null); setView('home'); }} apiKey={apiKey} />}
+        {view === 'library' && <LibraryView sources={sources} quotes={quotes} onNav={navTo} onSaveSource={handleSaveSource} />}
+        {view === 'sourceDetail' && selectedSource && <SourceDetailView source={selectedSource} quotes={quotes} onBack={() => setView('library')} onNav={navTo} onDelete={handleDeleteSource} onEdit={handleSaveSource} />}
+        {view === 'browse' && <BrowseView quotes={quotes} allThemes={allThemes} onNav={navTo} initialFilter={browseFilter} />}
+        {view === 'graph' && <GraphView quotes={quotes} connections={connections} sources={sources} onNav={navTo} />}
+        {view === 'detail' && selectedQuote && <DetailView quote={selectedQuote} onBack={() => setView('browse')} onDelete={handleDeleteQuote} onEdit={q => { setEditingQuote(q); setView('add'); }} quotes={quotes} sources={sources} connections={connections} onNav={navTo} />}
+        {view === 'settings' && <SettingsView apiKey={apiKey} onSaveApiKey={handleSaveApiKey} quotes={quotes} onRefresh={refresh} user={user} firebaseConfig={firebaseConfig} firebaseReady={firebaseReady} onLogin={handleGoogleLogin} onLogout={handleLogout} onSaveFirebaseConfig={handleSaveFirebaseConfig} dataLayer={dataLayerRef.current} />}
       </div>
 
       <nav className="bottom-nav">
-        <button className={`nav-item ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>{Icons.home}<span>Home</span></button>
-        <button className={`nav-item ${view === 'add' ? 'active' : ''}`} onClick={() => { setEditingQuote(null); setView('add'); }}>{Icons.plus}<span>Capture</span></button>
-        <button className={`nav-item ${view === 'library' || view === 'sourceDetail' ? 'active' : ''}`} onClick={() => setView('library')}>{Icons.library}<span>Library</span></button>
-        <button className={`nav-item ${view === 'browse' || view === 'detail' ? 'active' : ''}`} onClick={() => { setBrowseFilter(null); setView('browse'); }}>{Icons.search}<span>Browse</span></button>
-        <button className={`nav-item ${view === 'graph' ? 'active' : ''}`} onClick={() => setView('graph')}>{Icons.graph}<span>Map</span></button>
+        <button className={`nav-item ${view === 'home' ? 'active' : ''}`} onClick={() => setView('home')}>{I.home}<span>Home</span></button>
+        <button className={`nav-item ${view === 'add' ? 'active' : ''}`} onClick={() => { setEditingQuote(null); setView('add'); }}>{I.plus}<span>Capture</span></button>
+        <button className={`nav-item ${view === 'library' || view === 'sourceDetail' ? 'active' : ''}`} onClick={() => setView('library')}>{I.library}<span>Library</span></button>
+        <button className={`nav-item ${view === 'browse' || view === 'detail' ? 'active' : ''}`} onClick={() => { setBrowseFilter(null); setView('browse'); }}>{I.search}<span>Browse</span></button>
+        <button className={`nav-item ${view === 'graph' ? 'active' : ''}`} onClick={() => setView('graph')}>{I.graph}<span>Map</span></button>
+        <button className={`nav-item ${view === 'settings' ? 'active' : ''}`} onClick={() => setView('settings')}>{I.settings}<span>Settings</span></button>
       </nav>
 
-      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+      {toast && <Toast message={toast} type={toastType} onDone={() => setToast(null)} />}
     </div>
   );
 }
 
 // ─── Home View ──────────────────────────────────────────────
-function HomeView({ quotes, sources, onSelectQuote, onNavigate, onSelectSource }) {
+function HomeView({ quotes, sources, connections, onNav, apiKey }) {
   const sorted = useMemo(() => [...quotes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)), [quotes]);
-  const themeCount = useMemo(() => { const s = new Set(); quotes.forEach(q => q.themes?.forEach(t => s.add(t))); return s.size; }, [quotes]);
-  const recentSources = useMemo(() => {
-    const sourceQuoteMap = {};
-    quotes.forEach(q => {
-      if (q.sourceId) { if (!sourceQuoteMap[q.sourceId] || new Date(q.createdAt) > new Date(sourceQuoteMap[q.sourceId])) sourceQuoteMap[q.sourceId] = q.createdAt; }
-    });
-    return sources.map(s => ({ ...s, lastActivity: sourceQuoteMap[s.id] || s.createdAt })).sort((a, b) => new Date(b.lastActivity) - new Date(a.lastActivity)).slice(0, 4);
-  }, [sources, quotes]);
+  const themeCount = useMemo(() => { const s = new Set(); quotes.forEach(q => { (q.themes || []).forEach(t => s.add(t)); (q.aiThemes || []).forEach(t => s.add(t)); }); return s.size; }, [quotes]);
 
   if (quotes.length === 0) return (
-    <div className="fade-in"><div className="empty-state" style={{ paddingTop: 80 }}>{Icons.book}<h3>Welcome to Commonplace</h3><p>Capture the words that move you — from books, conversations, or anywhere. Speak them, photograph them, or type them in.</p><div style={{ marginTop: 20 }}><button className="btn btn-primary" onClick={() => onNavigate('add')}>Capture Your First Quote</button></div></div></div>
+    <div className="fade-in"><div className="empty-state" style={{ paddingTop: 80 }}>{I.book}<h3>Welcome to Commonplace</h3><p>Capture the words that move you. Speak them, photograph them, or type them in.{!apiKey ? ' Add your Anthropic API key in Settings to enable AI-powered theme discovery.' : ' AI is ready to discover themes and connections.'}</p><div style={{ marginTop: 20 }}><button className="btn btn-primary" onClick={() => onNav('add')}>Capture Your First Quote</button></div></div></div>
   );
 
   return (
@@ -670,31 +843,12 @@ function HomeView({ quotes, sources, onSelectQuote, onNavigate, onSelectSource }
         <div className="stat-card"><div className="stat-value">{quotes.length}</div><div className="stat-label">Quotes</div></div>
         <div className="stat-card"><div className="stat-value">{sources.length}</div><div className="stat-label">Sources</div></div>
         <div className="stat-card"><div className="stat-value">{themeCount}</div><div className="stat-label">Themes</div></div>
+        <div className="stat-card"><div className="stat-value" style={{ color: 'var(--ai-accent)' }}>{connections.length}</div><div className="stat-label">AI Links</div></div>
       </div>
 
-      {recentSources.length > 0 && (
-        <>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div className="section-title" style={{ marginBottom: 0 }}>Your Shelf</div>
-            <button className="btn btn-sm btn-secondary" onClick={() => onNavigate('library')}>View All</button>
-          </div>
-          {recentSources.map(s => {
-            const cfg = SOURCE_TYPE_CONFIG[s.type] || SOURCE_TYPE_CONFIG.other;
-            const qCount = quotes.filter(q => q.sourceId === s.id || (q.source && q.source.toLowerCase() === s.name.toLowerCase())).length;
-            return (
-              <div key={s.id} className="source-card" onClick={() => onSelectSource(s)}>
-                <div className="source-icon" style={{ background: cfg.color + '22', color: cfg.color }}>{cfg.icon}</div>
-                <div className="source-info"><div className="source-name">{s.name}</div><div className="source-detail">{s.author ? s.author + ' · ' : ''}{s.type}</div></div>
-                <div className="source-count">{qCount}</div>
-              </div>
-            );
-          })}
-        </>
-      )}
-
-      <div className="section-title" style={{ marginTop: 16 }}>Recently Captured</div>
-      {sorted.slice(0, 5).map(q => <QuoteCard key={q.id} quote={q} onClick={() => onSelectQuote(q)} />)}
-      {quotes.length > 5 && <button className="btn btn-secondary btn-full" style={{ marginTop: 4 }} onClick={() => onNavigate('browse')}>View All {quotes.length} Quotes</button>}
+      <div className="section-title">Recently Captured</div>
+      {sorted.slice(0, 5).map(q => <QuoteCard key={q.id} quote={q} onClick={() => onNav('detail', { quote: q })} />)}
+      {quotes.length > 5 && <button className="btn btn-secondary btn-full" onClick={() => onNav('browse')}>View All {quotes.length} Quotes</button>}
     </div>
   );
 }
@@ -702,6 +856,7 @@ function HomeView({ quotes, sources, onSelectQuote, onNavigate, onSelectSource }
 // ─── Quote Card ─────────────────────────────────────────────
 function QuoteCard({ quote, onClick }) {
   const displayText = quote.text?.length > 160 ? quote.text.slice(0, 157) + '...' : (quote.text || '');
+  const allThemes = [...new Set([...(quote.themes || []), ...(quote.aiThemes || [])])];
   return (
     <div className="card card-clickable" onClick={onClick}>
       <div className="quote-text">{displayText}</div>
@@ -709,14 +864,18 @@ function QuoteCard({ quote, onClick }) {
         {quote.source && <span className="quote-source">{quote.source}</span>}
         {quote.author && <span className="quote-author">— {quote.author}</span>}
         <span className="quote-date">{new Date(quote.date || quote.createdAt).toLocaleDateString()}</span>
+        {quote.aiAnalyzed && <span className="ai-status connected" style={{ fontSize: 9 }}>{I.ai}</span>}
       </div>
-      {quote.themes?.length > 0 && <div className="theme-tags">{quote.themes.map(t => <span key={t} className="theme-tag">{t}</span>)}</div>}
+      {allThemes.length > 0 && <div className="theme-tags">
+        {(quote.themes || []).map(t => <span key={t} className="theme-tag">{t}</span>)}
+        {(quote.aiThemes || []).filter(t => !(quote.themes || []).includes(t)).map(t => <span key={t} className="theme-tag ai-tag">{t}</span>)}
+      </div>}
     </div>
   );
 }
 
 // ─── Add Quote View ─────────────────────────────────────────
-function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, editingQuote, onCancelEdit }) {
+function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, editingQuote, onCancelEdit, apiKey }) {
   const isEditing = !!editingQuote;
   const [text, setText] = useState(editingQuote?.text || '');
   const [sourceId, setSourceId] = useState(editingQuote?.sourceId || '');
@@ -732,66 +891,39 @@ function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, ed
   const recognitionRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // When selecting an existing source, auto-fill author
   const handleSourceSelect = (id) => {
     setSourceId(id);
-    if (id) {
-      const src = sources.find(s => s.id === id);
-      if (src) { setSourceName(src.name); setAuthor(src.author || author); setSourceType(src.type); setShowNewSource(false); }
-    } else {
-      setSourceName(''); setShowNewSource(false);
-    }
+    if (id) { const src = sources.find(s => s.id === id); if (src) { setSourceName(src.name); setAuthor(src.author || author); setSourceType(src.type); setShowNewSource(false); } }
+    else { setSourceName(''); setShowNewSource(false); }
   };
 
-  // Voice recording
   const toggleRecording = () => {
     if (recording) { recognitionRef.current?.stop(); setRecording(false); return; }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) { alert('Speech recognition not supported. Try Chrome on your phone.'); return; }
-    const recog = new SR(); recog.continuous = true; recog.interimResults = true; recog.lang = 'en-GB';
+    if (!SR) { alert('Speech recognition not supported. Try Chrome.'); return; }
+    const r = new SR(); r.continuous = true; r.interimResults = true; r.lang = 'en-GB';
     let final = text;
-    recog.onresult = (e) => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) final += (final ? ' ' : '') + e.results[i][0].transcript; else interim += e.results[i][0].transcript; } setText(final + (interim ? ' ' + interim : '')); };
-    recog.onend = () => setRecording(false);
-    recog.onerror = () => setRecording(false);
-    recognitionRef.current = recog; recog.start(); setRecording(true);
+    r.onresult = (e) => { let interim = ''; for (let i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) final += (final ? ' ' : '') + e.results[i][0].transcript; else interim += e.results[i][0].transcript; } setText(final + (interim ? ' ' + interim : '')); };
+    r.onend = () => setRecording(false); r.onerror = () => setRecording(false);
+    recognitionRef.current = r; r.start(); setRecording(true);
   };
 
-  // OCR
   const handleImageCapture = async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
     setOcrLoading(true);
-    try {
-      const result = await Tesseract.recognize(file, 'eng', { logger: () => {} });
-      const extracted = result.data.text.trim();
-      if (extracted) setText(prev => (prev ? prev + '\n\n' : '') + extracted);
-      else alert('No text extracted. Try a clearer photo.');
-    } catch { alert('Error processing image.'); }
+    try { const res = await Tesseract.recognize(file, 'eng', { logger: () => {} }); const t = res.data.text.trim(); if (t) setText(prev => (prev ? prev + '\n\n' : '') + t); else alert('No text extracted.'); }
+    catch { alert('Error processing image.'); }
     finally { setOcrLoading(false); if (fileInputRef.current) fileInputRef.current.value = ''; }
   };
 
   const handleSubmit = async () => {
     if (!text.trim()) return;
-
-    // If creating a new source, save it first
-    let finalSourceId = sourceId;
+    let fSourceId = sourceId;
     if (showNewSource && sourceName.trim()) {
-      const newSource = { id: genId(), name: sourceName.trim(), type: sourceType, author: author.trim(), notes: '', createdAt: new Date().toISOString() };
-      await onSaveSource(newSource);
-      finalSourceId = newSource.id;
+      const ns = { id: genId(), name: sourceName.trim(), type: sourceType, author: author.trim(), notes: '', createdAt: new Date().toISOString() };
+      await onSaveSource(ns); fSourceId = ns.id;
     }
-
-    const quote = {
-      id: editingQuote?.id || genId(),
-      text: text.trim(),
-      source: sourceName.trim(),
-      sourceId: finalSourceId,
-      sourceType,
-      author: author.trim(),
-      themes: themes.filter(t => t.trim()),
-      date, notes: notes.trim(),
-      createdAt: editingQuote?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const quote = { id: editingQuote?.id || genId(), text: text.trim(), source: sourceName.trim(), sourceId: fSourceId, sourceType, author: author.trim(), themes: themes.filter(t => t.trim()), aiThemes: editingQuote?.aiThemes || [], aiAnalyzed: editingQuote?.aiAnalyzed || false, date, notes: notes.trim(), createdAt: editingQuote?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
     onSave(quote);
     if (!isEditing) { setText(''); setSourceId(''); setSourceName(''); setAuthor(''); setThemes([]); setNotes(''); setDate(new Date().toISOString().slice(0, 10)); setShowNewSource(false); }
   };
@@ -799,93 +931,51 @@ function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, ed
   return (
     <div className="fade-in">
       <div className="section-title">{isEditing ? 'Edit Quote' : 'Capture a Quote'}</div>
+      {apiKey && !isEditing && <div style={{ fontSize: 12, color: 'var(--ai-accent)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 4 }}>{I.ai} AI will auto-discover themes and connections when you save</div>}
 
       {!isEditing && (
         <>
           <div className="capture-methods">
-            <button className={`voice-btn ${recording ? 'recording' : ''}`} onClick={toggleRecording}>{recording ? Icons.stop : Icons.mic}</button>
+            <button className={`voice-btn ${recording ? 'recording' : ''}`} onClick={toggleRecording}>{recording ? I.stop : I.mic}</button>
             <div className="capture-divider">or</div>
-            <button className="camera-btn" onClick={() => fileInputRef.current?.click()}>{Icons.camera}</button>
+            <button className="camera-btn" onClick={() => fileInputRef.current?.click()}>{I.camera}</button>
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleImageCapture} />
           </div>
-          {recording && <div style={{ textAlign: 'center', marginBottom: 12 }}><span style={{ color: 'var(--danger)', fontSize: 12, animation: 'pulse 1.5s infinite' }}>Listening... speak your quote</span></div>}
-          {ocrLoading && <div className="ocr-loading"><div className="spinner" /><br />Extracting text from image...</div>}
+          {recording && <div style={{ textAlign: 'center', marginBottom: 12 }}><span style={{ color: 'var(--danger)', fontSize: 12, animation: 'pulse 1.5s infinite' }}>Listening...</span></div>}
+          {ocrLoading && <div className="ocr-loading"><div className="spinner" /><br />Extracting text...</div>}
         </>
       )}
 
-      <div className="form-group">
-        <label className="form-label">Quote</label>
-        <textarea className="form-textarea" value={text} onChange={e => setText(e.target.value)} placeholder="The words you want to remember..." rows={5} />
-      </div>
+      <div className="form-group"><label className="form-label">Quote</label><textarea className="form-textarea" value={text} onChange={e => setText(e.target.value)} placeholder="The words you want to remember..." rows={5} /></div>
 
-      {/* Source selection */}
-      <div className="form-group">
-        <label className="form-label">Source</label>
+      <div className="form-group"><label className="form-label">Source</label>
         {!showNewSource ? (
-          <div>
-            <select className="form-select" value={sourceId} onChange={e => { if (e.target.value === '__new__') { setSourceId(''); setSourceName(''); setShowNewSource(true); } else handleSourceSelect(e.target.value); }}>
-              <option value="">Select a source...</option>
-              {Object.keys(SOURCE_TYPE_CONFIG).map(type => {
-                const typeSources = sources.filter(s => s.type === type);
-                if (typeSources.length === 0) return null;
-                return <optgroup key={type} label={SOURCE_TYPE_CONFIG[type].label}>{typeSources.map(s => <option key={s.id} value={s.id}>{s.name}{s.author ? ` — ${s.author}` : ''}</option>)}</optgroup>;
-              })}
-              <option value="__new__">+ Add new source...</option>
-            </select>
-          </div>
+          <select className="form-select" value={sourceId} onChange={e => { if (e.target.value === '__new__') { setSourceId(''); setSourceName(''); setShowNewSource(true); } else handleSourceSelect(e.target.value); }}>
+            <option value="">Select a source...</option>
+            {Object.keys(SRC_CFG).map(type => { const ts = sources.filter(s => s.type === type); if (!ts.length) return null; return <optgroup key={type} label={SRC_CFG[type].label}>{ts.map(s => <option key={s.id} value={s.id}>{s.name}{s.author ? ` — ${s.author}` : ''}</option>)}</optgroup>; })}
+            <option value="__new__">+ Add new source...</option>
+          </select>
         ) : (
           <div style={{ background: 'var(--bg-input)', border: '1px solid var(--accent)', borderRadius: 8, padding: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>New Source</span>
-              <button className="btn btn-sm btn-secondary" onClick={() => setShowNewSource(false)}>Cancel</button>
-            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}><span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>New Source</span><button className="btn btn-sm btn-secondary" onClick={() => setShowNewSource(false)}>Cancel</button></div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-              <div>
-                <label className="form-label">Type</label>
-                <select className="form-select" value={sourceType} onChange={e => setSourceType(e.target.value)}>
-                  {Object.entries(SOURCE_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="form-label">Author</label>
-                <input className="form-input" value={author} onChange={e => setAuthor(e.target.value)} placeholder="e.g. Marcus Aurelius" list="author-suggestions" />
-                <datalist id="author-suggestions">{allAuthors.map(a => <option key={a} value={a} />)}</datalist>
-              </div>
+              <div><label className="form-label">Type</label><select className="form-select" value={sourceType} onChange={e => setSourceType(e.target.value)}>{Object.entries(SRC_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
+              <div><label className="form-label">Author</label><input className="form-input" value={author} onChange={e => setAuthor(e.target.value)} placeholder="Optional" list="al" /><datalist id="al">{allAuthors.map(a => <option key={a} value={a} />)}</datalist></div>
             </div>
-            <label className="form-label">Name</label>
-            <input className="form-input" value={sourceName} onChange={e => setSourceName(e.target.value)} placeholder="e.g. Meditations, or Sarah" autoFocus />
+            <label className="form-label">Name</label><input className="form-input" value={sourceName} onChange={e => setSourceName(e.target.value)} placeholder="e.g. Meditations" autoFocus />
           </div>
         )}
       </div>
 
-      {!showNewSource && sourceId && (
-        <div className="form-group">
-          <label className="form-label">Author (override)</label>
-          <input className="form-input" value={author} onChange={e => setAuthor(e.target.value)} placeholder="e.g. Marcus Aurelius" list="author-suggestions2" />
-          <datalist id="author-suggestions2">{allAuthors.map(a => <option key={a} value={a} />)}</datalist>
-        </div>
-      )}
+      {!showNewSource && sourceId && <div className="form-group"><label className="form-label">Author</label><input className="form-input" value={author} onChange={e => setAuthor(e.target.value)} /></div>}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <div className="form-group">
-          <label className="form-label">Date</label>
-          <input type="date" className="form-input" value={date} onChange={e => setDate(e.target.value)} />
-        </div>
-        {!showNewSource && !sourceId && (
-          <div className="form-group">
-            <label className="form-label">Source Type</label>
-            <select className="form-select" value={sourceType} onChange={e => setSourceType(e.target.value)}>
-              {Object.entries(SOURCE_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-            </select>
-          </div>
-        )}
+        <div className="form-group"><label className="form-label">Date</label><input type="date" className="form-input" value={date} onChange={e => setDate(e.target.value)} /></div>
+        {!showNewSource && !sourceId && <div className="form-group"><label className="form-label">Source Type</label><select className="form-select" value={sourceType} onChange={e => setSourceType(e.target.value)}>{Object.entries(SRC_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>}
       </div>
 
-      <div className="form-group"><label className="form-label">Themes</label><ThemeInput themes={themes} onChange={setThemes} allThemes={allThemes} /></div>
-      <div className="form-group">
-        <label className="form-label">Personal Notes (optional)</label>
-        <textarea className="form-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Why does this resonate?" rows={3} style={{ fontFamily: "'Inter', sans-serif", fontSize: 13 }} />
-      </div>
+      <div className="form-group"><label className="form-label">Manual Themes (optional — AI will also suggest)</label><ThemeInput themes={themes} onChange={setThemes} allThemes={allThemes} /></div>
+      <div className="form-group"><label className="form-label">Personal Notes</label><textarea className="form-textarea" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Why does this resonate?" rows={3} style={{ fontFamily: "'Inter', sans-serif", fontSize: 13 }} /></div>
 
       <div style={{ display: 'flex', gap: 10 }}>
         <button className="btn btn-primary btn-full" onClick={handleSubmit} disabled={!text.trim()}>{isEditing ? 'Update Quote' : 'Save Quote'}</button>
@@ -895,297 +985,297 @@ function AddQuoteView({ onSave, onSaveSource, allThemes, sources, allAuthors, ed
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// ─── LIBRARY VIEW ─────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════
-function LibraryView({ sources, quotes, onSelectSource, onSaveSource }) {
+// ─── Library View ───────────────────────────────────────────
+function LibraryView({ sources, quotes, onNav, onSaveSource }) {
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState(null);
-  const [showAddSource, setShowAddSource] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newType, setNewType] = useState('book');
-  const [newAuthor, setNewAuthor] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [newName, setNewName] = useState(''); const [newType, setNewType] = useState('book'); const [newAuthor, setNewAuthor] = useState('');
 
-  const quoteCountMap = useMemo(() => {
-    const map = {};
-    quotes.forEach(q => {
-      if (q.sourceId) map[q.sourceId] = (map[q.sourceId] || 0) + 1;
-      // Also match by name for legacy quotes
-      if (q.source) {
-        const matchSrc = sources.find(s => s.name.toLowerCase() === q.source.toLowerCase());
-        if (matchSrc && matchSrc.id !== q.sourceId) map[matchSrc.id] = (map[matchSrc.id] || 0) + 1;
-      }
-    });
-    return map;
-  }, [quotes, sources]);
+  const qMap = useMemo(() => { const m = {}; quotes.forEach(q => { if (q.sourceId) m[q.sourceId] = (m[q.sourceId] || 0) + 1; if (q.source) { const ms = sources.find(s => s.name.toLowerCase() === q.source.toLowerCase()); if (ms && ms.id !== q.sourceId) m[ms.id] = (m[ms.id] || 0) + 1; } }); return m; }, [quotes, sources]);
+  const filtered = useMemo(() => { let r = [...sources]; if (search.trim()) { const q = search.toLowerCase(); r = r.filter(s => s.name.toLowerCase().includes(q) || s.author?.toLowerCase().includes(q)); } if (filterType) r = r.filter(s => s.type === filterType); return r; }, [sources, search, filterType]);
+  const grouped = useMemo(() => { const g = {}; filtered.forEach(s => { const t = s.type || 'other'; if (!g[t]) g[t] = []; g[t].push(s); }); const order = ['book','article','whitepaper','podcast','person','conversation','other']; const sorted = {}; order.forEach(t => { if (g[t]) sorted[t] = g[t].sort((a, b) => a.name.localeCompare(b.name)); }); return sorted; }, [filtered]);
+  const activeTypes = useMemo(() => [...new Set(sources.map(s => s.type))], [sources]);
 
-  const filtered = useMemo(() => {
-    let result = [...sources];
-    if (search.trim()) { const q = search.toLowerCase(); result = result.filter(s => s.name.toLowerCase().includes(q) || s.author?.toLowerCase().includes(q)); }
-    if (filterType) result = result.filter(s => s.type === filterType);
-    return result;
-  }, [sources, search, filterType]);
-
-  // Group by type
-  const grouped = useMemo(() => {
-    const groups = {};
-    filtered.forEach(s => {
-      const type = s.type || 'other';
-      if (!groups[type]) groups[type] = [];
-      groups[type].push(s);
-    });
-    // Sort groups by configured order
-    const order = ['book', 'article', 'whitepaper', 'podcast', 'person', 'conversation', 'other'];
-    const sorted = {};
-    order.forEach(t => { if (groups[t]) sorted[t] = groups[t].sort((a, b) => a.name.localeCompare(b.name)); });
-    return sorted;
-  }, [filtered]);
-
-  const activeTypes = useMemo(() => { const s = new Set(); sources.forEach(src => s.add(src.type)); return Array.from(s); }, [sources]);
-
-  const handleAddSource = async () => {
-    if (!newName.trim()) return;
-    const source = { id: genId(), name: newName.trim(), type: newType, author: newAuthor.trim(), notes: '', createdAt: new Date().toISOString() };
-    await onSaveSource(source);
-    setNewName(''); setNewAuthor(''); setShowAddSource(false);
-  };
+  const handleAdd = async () => { if (!newName.trim()) return; await onSaveSource({ id: genId(), name: newName.trim(), type: newType, author: newAuthor.trim(), notes: '', createdAt: new Date().toISOString() }); setNewName(''); setNewAuthor(''); setShowAdd(false); };
 
   return (
     <div className="fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-        <div className="section-title" style={{ marginBottom: 0 }}>Library</div>
-        <button className="btn btn-sm btn-primary" onClick={() => setShowAddSource(!showAddSource)}>{showAddSource ? 'Cancel' : '+ Source'}</button>
-      </div>
-
-      {showAddSource && (
-        <div className="card slide-up" style={{ marginBottom: 14, borderColor: 'var(--accent)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-            <div><label className="form-label">Type</label><select className="form-select" value={newType} onChange={e => setNewType(e.target.value)}>{Object.entries(SOURCE_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
-            <div><label className="form-label">Author</label><input className="form-input" value={newAuthor} onChange={e => setNewAuthor(e.target.value)} placeholder="Optional" /></div>
-          </div>
-          <label className="form-label">Name</label>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input className="form-input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Meditations, Nature article..." autoFocus />
-            <button className="btn btn-primary btn-sm" onClick={handleAddSource} disabled={!newName.trim()}>Add</button>
-          </div>
-        </div>
-      )}
-
-      <div className="search-bar">{Icons.search}<input placeholder="Search sources..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-
-      <div className="filter-row">
-        <button className={`filter-pill ${!filterType ? 'active' : ''}`} onClick={() => setFilterType(null)}>All ({sources.length})</button>
-        {activeTypes.map(t => {
-          const cfg = SOURCE_TYPE_CONFIG[t] || SOURCE_TYPE_CONFIG.other;
-          const count = sources.filter(s => s.type === t).length;
-          return <button key={t} className={`filter-pill ${filterType === t ? 'active' : ''}`} onClick={() => setFilterType(filterType === t ? null : t)}>{cfg.label} ({count})</button>;
-        })}
-      </div>
-
-      {Object.keys(grouped).length === 0 ? (
-        <div className="empty-state">{Icons.library}<h3>No sources yet</h3><p>Sources are created automatically when you capture quotes, or you can add them manually above.</p></div>
-      ) : (
-        Object.entries(grouped).map(([type, srcs]) => {
-          const cfg = SOURCE_TYPE_CONFIG[type] || SOURCE_TYPE_CONFIG.other;
-          return (
-            <div key={type}>
-              {!filterType && <div className="source-group-header">{cfg.label}</div>}
-              {srcs.map(s => (
-                <div key={s.id} className="source-card" onClick={() => onSelectSource(s)}>
-                  <div className="source-icon" style={{ background: cfg.color + '22', color: cfg.color }}>{cfg.icon}</div>
-                  <div className="source-info"><div className="source-name">{s.name}</div><div className="source-detail">{s.author ? s.author : 'Unknown author'}</div></div>
-                  <div className="source-count">{quoteCountMap[s.id] || 0}</div>
-                </div>
-              ))}
-            </div>
-          );
-        })
-      )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}><div className="section-title" style={{ marginBottom: 0 }}>Library</div><button className="btn btn-sm btn-primary" onClick={() => setShowAdd(!showAdd)}>{showAdd ? 'Cancel' : '+ Source'}</button></div>
+      {showAdd && <div className="card slide-up" style={{ marginBottom: 14, borderColor: 'var(--accent)' }}><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}><div><label className="form-label">Type</label><select className="form-select" value={newType} onChange={e => setNewType(e.target.value)}>{Object.entries(SRC_CFG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div><div><label className="form-label">Author</label><input className="form-input" value={newAuthor} onChange={e => setNewAuthor(e.target.value)} placeholder="Optional" /></div></div><label className="form-label">Name</label><div style={{ display: 'flex', gap: 8 }}><input className="form-input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Meditations" autoFocus /><button className="btn btn-primary btn-sm" onClick={handleAdd} disabled={!newName.trim()}>Add</button></div></div>}
+      <div className="search-bar">{I.search}<input placeholder="Search sources..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+      <div className="filter-row"><button className={`filter-pill ${!filterType ? 'active' : ''}`} onClick={() => setFilterType(null)}>All ({sources.length})</button>{activeTypes.map(t => <button key={t} className={`filter-pill ${filterType === t ? 'active' : ''}`} onClick={() => setFilterType(filterType === t ? null : t)}>{(SRC_CFG[t]||SRC_CFG.other).label} ({sources.filter(s=>s.type===t).length})</button>)}</div>
+      {Object.keys(grouped).length === 0 ? <div className="empty-state">{I.library}<h3>No sources yet</h3><p>Sources are created when you capture quotes.</p></div>
+        : Object.entries(grouped).map(([type, srcs]) => { const cfg = SRC_CFG[type] || SRC_CFG.other; return (<div key={type}>{!filterType && <div className="source-group-header">{cfg.label}</div>}{srcs.map(s => <div key={s.id} className="source-card" onClick={() => onNav('sourceDetail', { source: s })}><div className="source-icon" style={{ background: cfg.color+'22', color: cfg.color }}>{cfg.icon}</div><div className="source-info"><div className="source-name">{s.name}</div><div className="source-detail">{s.author || 'Unknown author'}</div></div><div className="source-count">{qMap[s.id]||0}</div></div>)}</div>); })}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════
-// ─── SOURCE DETAIL VIEW ──────────────────────────────────
-// ═══════════════════════════════════════════════════════════
-function SourceDetailView({ source, quotes, allThemes, onBack, onSelectQuote, onDelete, onEdit }) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
+// ─── Source Detail View ─────────────────────────────────────
+function SourceDetailView({ source, quotes, onBack, onNav, onDelete, onEdit }) {
+  const [confirmDel, setConfirmDel] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editName, setEditName] = useState(source.name);
-  const [editAuthor, setEditAuthor] = useState(source.author || '');
-  const [editType, setEditType] = useState(source.type);
-  const [editNotes, setEditNotes] = useState(source.notes || '');
-
-  const cfg = SOURCE_TYPE_CONFIG[source.type] || SOURCE_TYPE_CONFIG.other;
-
-  const sourceQuotes = useMemo(() => {
-    return quotes.filter(q => q.sourceId === source.id || (q.source && q.source.toLowerCase() === source.name.toLowerCase()))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  }, [quotes, source]);
-
-  const sourceThemes = useMemo(() => {
-    const map = {};
-    sourceQuotes.forEach(q => q.themes?.forEach(t => { map[t] = (map[t] || 0) + 1; }));
-    return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [sourceQuotes]);
-
-  const handleSaveEdit = () => {
-    onEdit({ ...source, name: editName.trim(), author: editAuthor.trim(), type: editType, notes: editNotes.trim() });
-    setEditing(false);
-  };
+  const [eN, setEN] = useState(source.name); const [eA, setEA] = useState(source.author||''); const [eT, setET] = useState(source.type); const [eNotes, setENotes] = useState(source.notes||'');
+  const cfg = SRC_CFG[source.type] || SRC_CFG.other;
+  const sQuotes = useMemo(() => quotes.filter(q => q.sourceId === source.id || (q.source && q.source.toLowerCase() === source.name.toLowerCase())).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)), [quotes, source]);
+  const sThemes = useMemo(() => { const m = {}; sQuotes.forEach(q => { [...(q.themes||[]),...(q.aiThemes||[])].forEach(t => m[t]=(m[t]||0)+1); }); return Object.entries(m).sort((a,b)=>b[1]-a[1]); }, [sQuotes]);
 
   return (
     <div className="fade-in">
-      <button className="detail-back" onClick={onBack}>{Icons.chevronLeft} Back to Library</button>
-
+      <button className="detail-back" onClick={onBack}>{I.chevronLeft} Library</button>
       {!editing ? (
         <div className="source-hero">
-          <div className="source-hero-icon" style={{ background: cfg.color + '22', color: cfg.color }}>{cfg.icon}</div>
+          <div className="source-hero-icon" style={{ background: cfg.color+'22', color: cfg.color }}>{cfg.icon}</div>
           <div className="source-hero-name">{source.name}</div>
           {source.author && <div className="source-hero-author">by {source.author}</div>}
           <SourceTypeBadge type={source.type} />
-
-          <div className="source-hero-stats">
-            <div className="source-hero-stat"><div className="source-hero-stat-val">{sourceQuotes.length}</div><div className="source-hero-stat-lbl">Quotes</div></div>
-            <div className="source-hero-stat"><div className="source-hero-stat-val">{sourceThemes.length}</div><div className="source-hero-stat-lbl">Themes</div></div>
-          </div>
-
-          {sourceThemes.length > 0 && (
-            <div className="source-themes-bar">
-              {sourceThemes.slice(0, 6).map(([t, count]) => <span key={t} className="theme-tag">{t} ({count})</span>)}
-            </div>
-          )}
-
-          {source.notes && (
-            <div style={{ marginTop: 14, padding: 12, background: 'var(--accent-dim)', borderRadius: 8, textAlign: 'left' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Notes</div>
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{source.notes}</div>
-            </div>
-          )}
+          <div className="source-hero-stats"><div className="source-hero-stat"><div className="source-hero-stat-val">{sQuotes.length}</div><div className="source-hero-stat-lbl">Quotes</div></div><div className="source-hero-stat"><div className="source-hero-stat-val">{sThemes.length}</div><div className="source-hero-stat-lbl">Themes</div></div></div>
+          {sThemes.length > 0 && <div className="source-themes-bar">{sThemes.slice(0,6).map(([t,c])=><span key={t} className="theme-tag">{t} ({c})</span>)}</div>}
+          {source.notes && <div style={{ marginTop: 14, padding: 12, background: 'var(--accent-dim)', borderRadius: 8, textAlign: 'left' }}><div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Notes</div><div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{source.notes}</div></div>}
         </div>
       ) : (
         <div className="card" style={{ borderColor: 'var(--accent)', marginBottom: 16 }}>
-          <div className="section-title">Edit Source</div>
-          <div className="form-group"><label className="form-label">Name</label><input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} /></div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div className="form-group"><label className="form-label">Type</label><select className="form-select" value={editType} onChange={e => setEditType(e.target.value)}>{Object.entries(SOURCE_TYPE_CONFIG).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></div>
-            <div className="form-group"><label className="form-label">Author</label><input className="form-input" value={editAuthor} onChange={e => setEditAuthor(e.target.value)} /></div>
-          </div>
-          <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} style={{ fontFamily: "'Inter', sans-serif", fontSize: 13 }} placeholder="Your thoughts on this source..." /></div>
-          <div style={{ display: 'flex', gap: 10 }}><button className="btn btn-primary btn-full" onClick={handleSaveEdit}>Save</button><button className="btn btn-secondary" onClick={() => setEditing(false)}>Cancel</button></div>
+          <div className="form-group"><label className="form-label">Name</label><input className="form-input" value={eN} onChange={e=>setEN(e.target.value)} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}><div className="form-group"><label className="form-label">Type</label><select className="form-select" value={eT} onChange={e=>setET(e.target.value)}>{Object.entries(SRC_CFG).map(([k,v])=><option key={k} value={k}>{v.label}</option>)}</select></div><div className="form-group"><label className="form-label">Author</label><input className="form-input" value={eA} onChange={e=>setEA(e.target.value)} /></div></div>
+          <div className="form-group"><label className="form-label">Notes</label><textarea className="form-textarea" value={eNotes} onChange={e=>setENotes(e.target.value)} rows={3} style={{ fontFamily: "'Inter', sans-serif", fontSize: 13 }} /></div>
+          <div style={{ display: 'flex', gap: 10 }}><button className="btn btn-primary btn-full" onClick={() => { onEdit({...source, name:eN.trim(), author:eA.trim(), type:eT, notes:eNotes.trim()}); setEditing(false); }}>Save</button><button className="btn btn-secondary" onClick={()=>setEditing(false)}>Cancel</button></div>
         </div>
       )}
-
       <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-        <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditing(true)}>{Icons.edit} Edit Source</button>
-        {!confirmDelete
-          ? <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => setConfirmDelete(true)}>{Icons.trash} Delete</button>
-          : <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => onDelete(source.id)}>Confirm?</button>
-        }
+        <button className="btn btn-secondary" style={{ flex: 1 }} onClick={()=>setEditing(true)}>{I.edit} Edit</button>
+        {!confirmDel ? <button className="btn btn-danger" style={{ flex: 1 }} onClick={()=>setConfirmDel(true)}>{I.trash} Delete</button> : <button className="btn btn-danger" style={{ flex: 1 }} onClick={()=>onDelete(source.id)}>Confirm?</button>}
       </div>
-
-      {sourceQuotes.length > 0 && (
-        <>
-          <div className="section-title">Quotes ({sourceQuotes.length})</div>
-          {sourceQuotes.map(q => <QuoteCard key={q.id} quote={q} onClick={() => onSelectQuote(q)} />)}
-        </>
-      )}
+      {sQuotes.length > 0 && <><div className="section-title">Quotes ({sQuotes.length})</div>{sQuotes.map(q=><QuoteCard key={q.id} quote={q} onClick={()=>onNav('detail',{quote:q})} />)}</>}
     </div>
   );
 }
 
 // ─── Browse View ────────────────────────────────────────────
-function BrowseView({ quotes, allThemes, sources, onSelectQuote, initialFilter }) {
-  const [search, setSearch] = useState(initialFilter?.type === 'source' ? initialFilter.value : '');
-  const [filterTheme, setFilterTheme] = useState(initialFilter?.type === 'theme' ? initialFilter.value : null);
+function BrowseView({ quotes, allThemes, onNav, initialFilter }) {
+  const [search, setSearch] = useState(initialFilter?.type==='source'?initialFilter.value:'');
+  const [filterTheme, setFilterTheme] = useState(initialFilter?.type==='theme'?initialFilter.value:null);
   const [sortBy, setSortBy] = useState('newest');
-
   const filtered = useMemo(() => {
-    let result = [...quotes];
-    if (search.trim()) { const q = search.toLowerCase(); result = result.filter(r => r.text?.toLowerCase().includes(q) || r.source?.toLowerCase().includes(q) || r.author?.toLowerCase().includes(q) || r.notes?.toLowerCase().includes(q)); }
-    if (filterTheme) result = result.filter(r => r.themes?.includes(filterTheme));
-    if (sortBy === 'newest') result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    else if (sortBy === 'oldest') result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    else if (sortBy === 'source') result.sort((a, b) => (a.source || '').localeCompare(b.source || ''));
-    return result;
+    let r = [...quotes];
+    if (search.trim()) { const q = search.toLowerCase(); r = r.filter(x => x.text?.toLowerCase().includes(q) || x.source?.toLowerCase().includes(q) || x.author?.toLowerCase().includes(q) || x.notes?.toLowerCase().includes(q)); }
+    if (filterTheme) r = r.filter(x => (x.themes||[]).includes(filterTheme) || (x.aiThemes||[]).includes(filterTheme));
+    if (sortBy==='newest') r.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt));
+    else if (sortBy==='oldest') r.sort((a,b)=>new Date(a.createdAt)-new Date(b.createdAt));
+    else r.sort((a,b)=>(a.source||'').localeCompare(b.source||''));
+    return r;
   }, [quotes, search, filterTheme, sortBy]);
 
   return (
     <div className="fade-in">
-      <div className="search-bar">{Icons.search}<input placeholder="Search quotes, books, people..." value={search} onChange={e => setSearch(e.target.value)} /></div>
-      <div className="filter-row">
-        <button className={`filter-pill ${!filterTheme ? 'active' : ''}`} onClick={() => setFilterTheme(null)}>All</button>
-        {allThemes.slice(0, 6).map(t => <button key={t} className={`filter-pill ${filterTheme === t ? 'active' : ''}`} onClick={() => setFilterTheme(filterTheme === t ? null : t)}>{t}</button>)}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{filtered.length} quote{filtered.length !== 1 ? 's' : ''}</span>
-        <select className="form-select" style={{ width: 'auto', padding: '4px 8px', fontSize: 12 }} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-          <option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="source">By source</option>
-        </select>
-      </div>
-      {filtered.length === 0 ? <div className="empty-state">{Icons.search}<h3>No quotes found</h3><p>Try a different search or clear filters.</p></div>
-        : filtered.map(q => <QuoteCard key={q.id} quote={q} onClick={() => onSelectQuote(q)} />)}
+      <div className="search-bar">{I.search}<input placeholder="Search quotes, books, people..." value={search} onChange={e=>setSearch(e.target.value)} /></div>
+      <div className="filter-row"><button className={`filter-pill ${!filterTheme?'active':''}`} onClick={()=>setFilterTheme(null)}>All</button>{allThemes.slice(0,6).map(t=><button key={t} className={`filter-pill ${filterTheme===t?'active':''}`} onClick={()=>setFilterTheme(filterTheme===t?null:t)}>{t}</button>)}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}><span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{filtered.length} quote{filtered.length!==1?'s':''}</span><select className="form-select" style={{ width: 'auto', padding: '4px 8px', fontSize: 12 }} value={sortBy} onChange={e=>setSortBy(e.target.value)}><option value="newest">Newest</option><option value="oldest">Oldest</option><option value="source">Source</option></select></div>
+      {filtered.length===0 ? <div className="empty-state">{I.search}<h3>No quotes found</h3><p>Try different search terms.</p></div>
+        : filtered.map(q=><QuoteCard key={q.id} quote={q} onClick={()=>onNav('detail',{quote:q})} />)}
     </div>
   );
 }
 
 // ─── Detail View ────────────────────────────────────────────
-function DetailView({ quote, onBack, onDelete, onEdit, quotes, sources, onSelectQuote, onSelectSource }) {
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const linkedSource = useMemo(() => {
-    if (quote.sourceId) return sources.find(s => s.id === quote.sourceId);
-    if (quote.source) return sources.find(s => s.name.toLowerCase() === quote.source.toLowerCase());
-    return null;
-  }, [quote, sources]);
+function DetailView({ quote, onBack, onDelete, onEdit, quotes, sources, connections, onNav }) {
+  const [confirmDel, setConfirmDel] = useState(false);
+  const linkedSource = useMemo(() => { if (quote.sourceId) return sources.find(s=>s.id===quote.sourceId); if (quote.source) return sources.find(s=>s.name.toLowerCase()===quote.source.toLowerCase()); return null; }, [quote, sources]);
 
-  const related = useMemo(() =>
-    quotes.filter(q => { if (q.id === quote.id) return false; if (q.source && q.source === quote.source) return true; return q.themes?.some(t => quote.themes?.includes(t)); }).slice(0, 3),
-    [quotes, quote]
-  );
+  const quoteConnections = useMemo(() => {
+    return connections.filter(c => c.quoteA === quote.id || c.quoteB === quote.id).map(c => {
+      const otherId = c.quoteA === quote.id ? c.quoteB : c.quoteA;
+      const other = quotes.find(q => q.id === otherId);
+      return other ? { ...c, otherQuote: other } : null;
+    }).filter(Boolean);
+  }, [connections, quote, quotes]);
+
+  const related = useMemo(() => quotes.filter(q => { if (q.id === quote.id) return false; const connIds = quoteConnections.map(c=>c.otherQuote.id); if (connIds.includes(q.id)) return false; return (q.themes||[]).some(t=>(quote.themes||[]).includes(t)) || (q.aiThemes||[]).some(t=>(quote.aiThemes||[]).includes(t)); }).slice(0,3), [quotes, quote, quoteConnections]);
+  const allThemes = [...new Set([...(quote.themes||[]),...(quote.aiThemes||[])])];
 
   return (
     <div className="fade-in">
-      <button className="detail-back" onClick={onBack}>{Icons.chevronLeft} Back</button>
+      <button className="detail-back" onClick={onBack}>{I.chevronLeft} Back</button>
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="quote-text" style={{ fontSize: 16, lineHeight: 1.8 }}>{quote.text}</div>
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12, marginTop: 12 }}>
           <div className="quote-meta" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-            {quote.source && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: linkedSource ? 'pointer' : 'default' }} onClick={() => linkedSource && onSelectSource(linkedSource)}>
-                {(SOURCE_TYPE_CONFIG[quote.sourceType] || SOURCE_TYPE_CONFIG.other).icon}
-                <span className="quote-source" style={{ textDecoration: linkedSource ? 'underline' : 'none' }}>{quote.source}</span>
-                <SourceTypeBadge type={quote.sourceType || 'other'} />
-              </div>
-            )}
+            {quote.source && <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: linkedSource?'pointer':'default' }} onClick={()=>linkedSource && onNav('sourceDetail',{source:linkedSource})}>{(SRC_CFG[quote.sourceType]||SRC_CFG.other).icon}<span className="quote-source" style={{ textDecoration: linkedSource?'underline':'none' }}>{quote.source}</span><SourceTypeBadge type={quote.sourceType||'other'} /></div>}
             {quote.author && <div className="quote-author">by {quote.author}</div>}
-            <div className="quote-date">{new Date(quote.date || quote.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+            <div className="quote-date">{new Date(quote.date||quote.createdAt).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}</div>
           </div>
         </div>
-        {quote.themes?.length > 0 && <div className="theme-tags" style={{ marginTop: 12 }}>{quote.themes.map(t => <span key={t} className="theme-tag">{t}</span>)}</div>}
-        {quote.notes && (
-          <div style={{ marginTop: 14, padding: 12, background: 'var(--accent-dim)', borderRadius: 8 }}>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Your Notes</div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{quote.notes}</div>
-          </div>
-        )}
+        {allThemes.length > 0 && <div className="theme-tags" style={{ marginTop: 12 }}>
+          {(quote.themes||[]).map(t=><span key={t} className="theme-tag">{t}</span>)}
+          {(quote.aiThemes||[]).filter(t=>!(quote.themes||[]).includes(t)).map(t=><span key={t} className="theme-tag ai-tag">{I.ai} {t}</span>)}
+        </div>}
+        {quote.notes && <div style={{ marginTop: 14, padding: 12, background: 'var(--accent-dim)', borderRadius: 8 }}><div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>Your Notes</div><div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{quote.notes}</div></div>}
       </div>
+
+      {quoteConnections.length > 0 && (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}><span style={{ color: 'var(--ai-accent)' }}>{I.ai}</span><div className="section-title" style={{ marginBottom: 0, color: 'var(--ai-accent)' }}>AI-Discovered Connections</div></div>
+          {quoteConnections.map(c => (
+            <div key={c.id} className="connection-card" onClick={() => onNav('detail', { quote: c.otherQuote })}>
+              <div className="connection-reason">{c.reason}</div>
+              <div className="connection-quote">"{c.otherQuote.text.slice(0, 120)}..."</div>
+              <div className="connection-source">{c.otherQuote.source}{c.otherQuote.author ? ` — ${c.otherQuote.author}` : ''}</div>
+            </div>
+          ))}
+        </>
+      )}
+
       <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-        <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => onEdit(quote)}>{Icons.edit} Edit</button>
-        {!confirmDelete ? <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => setConfirmDelete(true)}>{Icons.trash} Delete</button>
-          : <button className="btn btn-danger" style={{ flex: 1 }} onClick={() => onDelete(quote.id)}>Confirm?</button>}
+        <button className="btn btn-secondary" style={{ flex: 1 }} onClick={()=>onEdit(quote)}>{I.edit} Edit</button>
+        {!confirmDel ? <button className="btn btn-danger" style={{ flex: 1 }} onClick={()=>setConfirmDel(true)}>{I.trash} Delete</button>
+          : <button className="btn btn-danger" style={{ flex: 1 }} onClick={()=>onDelete(quote.id)}>Confirm?</button>}
       </div>
-      {related.length > 0 && <><div className="section-title">Related Quotes</div>{related.map(q => <QuoteCard key={q.id} quote={q} onClick={() => onSelectQuote(q)} />)}</>}
+
+      {related.length > 0 && <><div className="section-title">Related by Theme</div>{related.map(q=><QuoteCard key={q.id} quote={q} onClick={()=>onNav('detail',{quote:q})} />)}</>}
     </div>
   );
 }
 
 // ─── Graph View ─────────────────────────────────────────────
-function GraphView({ quotes, onNodeClick }) {
+function GraphView({ quotes, connections, sources, onNav }) {
   return (
     <div className="fade-in">
       <div className="section-title">Knowledge Map</div>
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>Themes and sources as nodes. Tap a node to explore. Drag to rearrange, pinch to zoom.</p>
-      <KnowledgeGraph quotes={quotes} onNodeClick={onNodeClick} />
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>Every quote, theme, and source as nodes. Dashed purple lines are AI-discovered connections. Hover to highlight, tap to explore.</p>
+      <KnowledgeGraph quotes={quotes} connections={connections}
+        onQuoteClick={q => onNav('detail', { quote: q })}
+        onThemeClick={t => onNav('browse', { filter: { type: 'theme', value: t } })}
+        onSourceClick={name => { const s = sources.find(x=>x.name===name); if (s) onNav('sourceDetail',{source:s}); else onNav('browse',{filter:{type:'source',value:name}}); }}
+      />
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// ─── SETTINGS VIEW ───────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+function SettingsView({ apiKey, onSaveApiKey, quotes, onRefresh, user, firebaseConfig, firebaseReady, onLogin, onLogout, onSaveFirebaseConfig, dataLayer }) {
+  const [key, setKey] = useState(apiKey);
+  const [showKey, setShowKey] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [configText, setConfigText] = useState(firebaseConfig ? JSON.stringify(firebaseConfig, null, 2) : '');
+  const [showSetup, setShowSetup] = useState(!firebaseConfig);
+
+  const unanalyzed = useMemo(() => quotes.filter(q => !q.aiAnalyzed), [quotes]);
+
+  const handleBatchAnalyze = async () => {
+    if (!key) { alert('Please save your API key first.'); return; }
+    setAnalyzing(true); setProgress({ done: 0, total: quotes.length });
+    try {
+      const results = await aiBatchAnalyze(key, quotes, (done, total) => setProgress({ done, total }));
+      for (const [qId, themes] of Object.entries(results.themes)) {
+        const q = quotes.find(x => x.id === qId);
+        if (q) { q.aiThemes = themes; q.aiAnalyzed = true; await dataLayer.put('quotes', q); }
+      }
+      for (const conn of results.connections) { await dataLayer.put('connections', conn); }
+      await onRefresh();
+      alert(`Done! Found ${Object.keys(results.themes).length} theme sets and ${results.connections.length} connections.`);
+    } catch (err) { console.error(err); alert('Error during analysis: ' + err.message); }
+    finally { setAnalyzing(false); }
+  };
+
+  return (
+    <div className="fade-in">
+      <div className="section-title">Settings</div>
+
+      {/* ─── Cloud Sync ─── */}
+      <div className="settings-section">
+        <div className="settings-section-title">{I.cloud} Cloud Sync</div>
+
+        {user ? (
+          <div>
+            <div className="user-bar">
+              {user.photoURL && <img className="user-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />}
+              <div className="user-bar-info">
+                <div className="user-bar-name">{user.displayName || 'User'}</div>
+                <div className="user-bar-email">{user.email}</div>
+              </div>
+              <span className="sync-badge">{I.cloud} Synced</span>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={onLogout}>{I.logout} Sign Out</button>
+          </div>
+        ) : (
+          <div>
+            {firebaseReady ? (
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.6 }}>
+                  Firebase is configured. Sign in with Google to sync your quotes across all your devices.
+                </p>
+                <button className="btn btn-google btn-full" onClick={onLogin}>
+                  <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+                  Sign in with Google
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.6 }}>
+                  Set up Firebase to sync your quotes across devices. Your data stays in your own Firebase project — you own it completely.
+                </p>
+                {showSetup && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div className="setup-step"><span className="setup-step-num">1</span><strong style={{ fontSize: 13 }}>Go to Firebase Console</strong><p>Visit <span style={{ color: 'var(--sync-accent)' }}>console.firebase.google.com</span> and create a new project (or use an existing one).</p></div>
+                    <div className="setup-step"><span className="setup-step-num">2</span><strong style={{ fontSize: 13 }}>Add a Web App</strong><p>Click the web icon (&lt;/&gt;) to add a web app. Copy the firebaseConfig object.</p></div>
+                    <div className="setup-step"><span className="setup-step-num">3</span><strong style={{ fontSize: 13 }}>Enable Authentication</strong><p>Go to Authentication &rarr; Sign-in method &rarr; Enable Google sign-in.</p></div>
+                    <div className="setup-step"><span className="setup-step-num">4</span><strong style={{ fontSize: 13 }}>Enable Firestore</strong><p>Go to Firestore Database &rarr; Create database &rarr; Start in test mode.</p></div>
+                    <div className="setup-step"><span className="setup-step-num">5</span><strong style={{ fontSize: 13 }}>Paste Config Below</strong><p>Paste the JSON config object from step 2 into the field below and save.</p></div>
+                  </div>
+                )}
+                {!showSetup && <button className="btn btn-sm btn-secondary" onClick={() => setShowSetup(true)} style={{ marginBottom: 12 }}>Show Setup Guide</button>}
+                <div className="form-group">
+                  <label className="form-label">Firebase Config (JSON)</label>
+                  <textarea className="form-textarea" value={configText} onChange={e => setConfigText(e.target.value)} placeholder='{"apiKey": "...", "authDomain": "...", "projectId": "...", ...}' rows={6} style={{ fontFamily: 'monospace', fontSize: 12 }} />
+                </div>
+                <button className="btn btn-primary" onClick={() => onSaveFirebaseConfig(configText)} disabled={!configText.trim()}>Save Firebase Config</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ─── AI Config ─── */}
+      <div className="settings-section">
+        <div className="settings-section-title">AI Configuration</div>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.6 }}>
+          Enter your Anthropic API key to enable automatic theme extraction and connection discovery. Your key is stored {dataLayer.isCloud ? 'in your cloud account' : 'locally on this device only'}.
+        </p>
+        <div className="form-group">
+          <label className="form-label">API Key</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="form-input api-key-input" type={showKey ? 'text' : 'password'} value={key} onChange={e => setKey(e.target.value)} placeholder="sk-ant-..." style={{ flex: 1 }} />
+            <button className="btn btn-sm btn-secondary" onClick={() => setShowKey(!showKey)}>{showKey ? 'Hide' : 'Show'}</button>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-primary" onClick={() => onSaveApiKey(key)} disabled={key === apiKey}>Save Key</button>
+          {apiKey && <button className="btn btn-danger btn-sm" onClick={() => { setKey(''); onSaveApiKey(''); }}>Remove</button>}
+        </div>
+        {apiKey && <div style={{ marginTop: 8 }}><span className="ai-status connected">{I.ai} Connected — using Claude Haiku</span></div>}
+      </div>
+
+      {/* ─── Batch Analysis ─── */}
+      <div className="settings-section">
+        <div className="settings-section-title">Batch Analysis</div>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.6 }}>
+          Analyze your entire collection to discover themes and connections across all quotes. {unanalyzed.length > 0 ? `${unanalyzed.length} quote${unanalyzed.length!==1?'s':''} haven't been analyzed yet.` : 'All quotes have been analyzed.'}
+        </p>
+        <button className="btn btn-ai btn-full" onClick={handleBatchAnalyze} disabled={analyzing || !apiKey || quotes.length === 0}>
+          {I.ai} {analyzing ? `Analyzing... ${progress.done}/${progress.total}` : `Analyze All ${quotes.length} Quotes`}
+        </button>
+        {analyzing && <div className="progress-bar" style={{ marginTop: 8 }}><div className="progress-bar-fill" style={{ width: `${(progress.done/progress.total)*100}%` }} /></div>}
+      </div>
+
+      {/* ─── About ─── */}
+      <div className="settings-section">
+        <div className="settings-section-title">About</div>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          Commonplace v4.0 — your digital commonplace book with AI-powered theme discovery and cloud sync. {dataLayer.isCloud ? 'Data synced via Firebase.' : 'Data stored locally.'} API calls go directly to Anthropic — no intermediary servers.
+        </p>
+      </div>
     </div>
   );
 }
